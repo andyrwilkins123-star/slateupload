@@ -2987,7 +2987,7 @@ async translateSelectedText() {
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' }, 
             body: JSON.stringify({ 
-               contents: [{ parts: [{ text: `You are a strict translation engine. Translate the following text into ${lang}. Return ONLY the translated text. Do not provide explanations, notes, pronunciation, or alternative options. Do not use Markdown or bullet points. Just the translation. Text: "${originalText}"` }] }]
+               contents: [{ parts: [{ Translate to [Language]: [Phrase] }] }]
             }) 
         });
 
