@@ -1932,12 +1932,37 @@ this.textEditor.addEventListener('touchstart', (e) => e.stopPropagation());
         bar.style.display = 'flex';
         
         const barWidth = 220; 
-        let left = b.cx - (barWidth / 2);
-        let top = b.y - 260; // Position slightly higher to clear the object
+// Get the actual height of the bar after it's rendered to be precise
+const barHeight = bar.offsetHeight || 260; 
 
-        if (top < 10) top = b.y + b.h + 20; 
-        if (left < 10) left = 10;
-        if (left + barWidth > window.innerWidth) left = window.innerWidth - barWidth - 10;
+let left = b.cx - (barWidth / 2);
+let top = b.y - barHeight - 10; // Try to position above the element
+
+// --- BOUNDS CHECK LOGIC ---
+
+// 1. Bottom Edge: If it goes off the bottom, flip it to show ABOVE the element
+if (top + barHeight > window.innerHeight) {
+    top = b.y - barHeight - 10;
+}
+
+// 2. Top Edge: If it still goes off the top, push it down to the very top (10px padding)
+if (top < 10) {
+    // If it's too high, try showing it BELOW the element instead
+    top = b.y + b.h + 20;
+    
+    // If it STILL goes off the bottom, just pin it to the top of the screen
+    if (top + barHeight > window.innerHeight) {
+        top = 10;
+    }
+}
+
+// 3. Left Edge: Keep 10px from the left side
+if (left < 10) left = 10;
+
+// 4. Right Edge: Keep 10px from the right side
+if (left + barWidth > window.innerWidth) {
+    left = window.innerWidth - barWidth - 10;
+}
         
         bar.style.left = left + 'px';
         bar.style.top = top + 'px';
