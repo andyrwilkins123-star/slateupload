@@ -645,6 +645,60 @@ Contact: andyrwilkins123@gmail.com -->
     background: #fee2e2;
     border-color: #f87171;
 }
+/* --- RADIAL MENU (PIE MENU) --- */
+.radial-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    z-index: 9999;
+    display: none; /* Hidden by default */
+}
+
+.radial-menu {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    /* Center the menu on the click coordinates */
+    transform: translate(-50%, -50%) scale(0); 
+    border-radius: 50%;
+    pointer-events: none; /* Let clicks pass through the container to buttons */
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.radial-menu.open {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.radial-btn {
+    position: absolute;
+    width: 50px; height: 50px;
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    cursor: pointer;
+    pointer-events: auto;
+    color: #475569;
+    transition: 0.2s;
+}
+
+.radial-btn:hover {
+    background: #f1f5f9;
+    transform: scale(1.15);
+    color: #0f172a;
+    border-color: #3b82f6;
+}
+
+.radial-btn svg { width: 24px; height: 24px; }
+
+/* The Center Close/Cancel Button */
+.radial-center {
+    top: 50%; left: 50%;
+    margin-top: -20px; margin-left: -20px; /* Half of width/height */
+    width: 40px; height: 40px;
+    background: #ef4444; color: white; border: none;
+}
+.radial-center:hover { background: #dc2626; color: white; }
         
     </style>
 </head>
@@ -1062,7 +1116,14 @@ Contact: andyrwilkins123@gmail.com -->
             <button onclick="sendMessage()" style="background:#1a2a6c; color:white; border:none; width:45px; height:40px; border-radius:6px; cursor:pointer;">➤</button>
         </div>
     </div>
-
+<div id="radialOverlay" class="radial-overlay" onclick="radialMenu.hide()">
+    <div id="radialMenu" class="radial-menu">
+        <div class="radial-btn radial-center" onclick="radialMenu.hide()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </div>
+        
+        </div>
+</div>
     <input type="color" id="colorPicker" style="display:none;" oninput="app.setColor(this.value)">
     <input type="file" id="fileInput" accept="image/*" style="display:none;">
     <input type="file" id="loadInput" accept=".json" onchange="app.loadProjectFile(this)" style="display:none;">
@@ -2045,19 +2106,23 @@ if (left + barWidth > window.innerWidth) {
                 if (o.penType === 'highlighter') { ctx.globalAlpha = 0.3; ctx.lineWidth = 20; }
                 ctx.beginPath();
                 if (o.points.length > 2) {
-                    ctx.moveTo(o.points[0].x, o.points[0].y);
-                    for (let i = 1; i < o.points.length - 2; i++) {
-                        const c = (o.points[i].x + o.points[i+1].x) / 2;
-                        const d = (o.points[i].y + o.points[i+1].y) / 2;
-                        ctx.quadraticCurveTo(o.points[i].x, o.points[i].y, c, d);
-                    }
-                    const last = o.points[o.points.length - 1];
-                    const secondLast = o.points[o.points.length - 2];
-                    ctx.quadraticCurveTo(secondLast.x, secondLast.y, last.x, last.y);
-                } else if (o.points.length === 2) { 
-                    ctx.moveTo(o.points[0].x, o.points[0].y); 
-                    ctx.lineTo(o.points[1].x, o.points[1].y); 
-                }
+    ctx.moveTo(o.points[0].x, o.points[0].y);
+    
+    // Loop through points to create smooth Bezier curves
+    for (let i = 1; i < o.points.length - 2; i++) {
+        const xc = (o.points[i].x + o.points[i + 1].x) / 2;
+        const yc = (o.points[i].y + o.points[i + 1].y) / 2;
+        ctx.quadraticCurveTo(o.points[i].x, o.points[i].y, xc, yc);
+    }
+    
+    // Handle the last two points
+    ctx.quadraticCurveTo(
+        o.points[o.points.length - 2].x,
+        o.points[o.points.length - 2].y,
+        o.points[o.points.length - 1].x,
+        o.points[o.points.length - 1].y
+    );
+}
                 ctx.stroke();
             } else if (o.type === 'rect') {
                 ctx.beginPath(); ctx.rect(o.x, o.y, o.w, o.h); 
@@ -2989,7 +3054,7 @@ async translateSelectedText() {
             body: JSON.stringify({ 
     contents: [{ 
         parts: [{ 
-            // FIXED: Use the 'text' key and template literals (backticks)
+            
             text: `Translate to ${lang}: ${originalText}` 
         }] 
     }] 
@@ -3590,11 +3655,137 @@ updateTextColor(val) {
         setGridSize(s) { this.state.gridSize = parseInt(s); this.drawGrid(); }
         toggleSnap() { this.state.snapToGrid = !this.state.snapToGrid; }
     }
+class RadialMenu {
+    constructor() {
+        this.overlay = document.getElementById('radialOverlay');
+        this.menu = document.getElementById('radialMenu');
+        this.active = false;
+        
+        // Configuration: Items to show in the ring
+        // Angle is in degrees (0 is right, 90 is down, 180 is left, 270 is up)
+        this.items = [
+            // Top (Pen)
+    { id: 'pen', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>', angle: 270, action: () => app.setTool('pen') },
+    
+    // Top Right (Rectangle)
+    { id: 'rect', icon: '<div style="width:16px; height:16px; border:2px solid currentColor; border-radius:2px;"></div>', angle: 315, action: () => app.setTool('rect') },
+    
+    // Right (Select)
+    { id: 'select', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path></svg>', angle: 0, action: () => app.setTool('select') },
+    
+    // Bottom Right (Circle)
+    { id: 'circle', icon: '<div style="width:16px; height:16px; border:2px solid currentColor; border-radius:50%;"></div>', angle: 45, action: () => app.setTool('circle') },
+    
+    // Bottom (Eraser)
+    { id: 'eraser', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 20H7L3 16C3 16 3 16 3 16C1.5 14.5 1.5 12 3 10.5L10 3.5C11.5 2 14 2 15.5 3.5L20.5 8.5C22 10 22 12.5 20.5 14L16 18.5"></path><path d="M18 14l-6-6"></path></svg>', angle: 90, action: () => app.setTool('eraser') },
+    
+    // NEW: Top Left (Line Tool)
+    { id: 'line', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"></line></svg>', angle: 225, action: () => app.setTool('line') },
 
+    // Left (Undo)
+    { id: 'undo', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path></svg>', angle: 180, action: () => app.undo() },
+        ];
+
+        this.initButtons();
+        this.initEvents();
+    }
+
+    initButtons() {
+        const radius = 70; // Distance from center
+        this.items.forEach(item => {
+            const btn = document.createElement('div');
+            btn.className = 'radial-btn';
+            btn.innerHTML = item.icon;
+            btn.title = item.id;
+            
+            // Calculate Position using Math.cos/sin
+            const rad = item.angle * (Math.PI / 180);
+            const x = Math.cos(rad) * radius;
+            const y = Math.sin(rad) * radius;
+            
+            // Center the button (subtract half button size 25px) + center offset 100px (half menu size)
+            // But since we use flexbox centering in parent, we can just use top/left margins relative to center
+            btn.style.left = `calc(50% + ${x}px - 25px)`;
+            btn.style.top = `calc(50% + ${y}px - 25px)`;
+            
+            btn.onclick = (e) => {
+                e.stopPropagation(); // Don't close immediately (handled by logic)
+                item.action();
+                this.hide();
+            };
+            
+            this.menu.appendChild(btn);
+        });
+    }
+
+    initEvents() {
+        // 1. Right Click (Context Menu)
+        window.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            this.show(e.clientX, e.clientY);
+        });
+
+        // 2. Long Press (Touch) logic
+        let touchTimer = null;
+        const longPressDuration = 500; // ms
+        const canvas = document.getElementById('tempCanvas'); // Attach to drawing surface
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) return; // Ignore multi-touch
+            this.active = false; // Reset
+            
+            const touch = e.touches[0];
+            const x = touch.clientX;
+            const y = touch.clientY;
+
+            touchTimer = setTimeout(() => {
+                this.show(x, y);
+                // Optional: Vibrate on mobile if supported
+                if (navigator.vibrate) navigator.vibrate(50);
+            }, longPressDuration);
+        }, { passive: false });
+
+        // Cancel timer on move (if they drag more than 10px) or end
+        const cancelTimer = () => {
+            if (touchTimer) {
+                clearTimeout(touchTimer);
+                touchTimer = null;
+            }
+        };
+
+        canvas.addEventListener('touchmove', (e) => {
+            // We only cancel if they move significantly, allowing for "jitter"
+            // For simplicity, we just cancel on any move here, which is standard for long-press
+            cancelTimer();
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', cancelTimer);
+    }
+
+    show(x, y) {
+        this.overlay.style.display = 'block';
+        this.menu.style.left = x + 'px';
+        this.menu.style.top = y + 'px';
+        
+        // Small delay to allow CSS transition to play from scale(0) to scale(1)
+        setTimeout(() => {
+            this.menu.classList.add('open');
+            this.active = true;
+        }, 10);
+    }
+
+    hide() {
+        this.menu.classList.remove('open');
+        setTimeout(() => {
+            this.overlay.style.display = 'none';
+            this.active = false;
+        }, 200); // Wait for transition
+    }
+}
     // --- INITIALIZATION ---
     const app = new MathsMaster();
     const ui = new UIController();
-
+const radialMenu = new RadialMenu();
     // AI Chat Functions
     
     function toggleChat() { 
