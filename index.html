@@ -2987,8 +2987,13 @@ async translateSelectedText() {
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' }, 
             body: JSON.stringify({ 
-               contents: [{ parts: [{ Translate to [Language]: [Phrase] }] }]
-            }) 
+    contents: [{ 
+        parts: [{ 
+            // FIXED: Use the 'text' key and template literals (backticks)
+            text: `Translate to ${lang}: ${originalText}` 
+        }] 
+    }] 
+})
         });
 
         if (!response.ok) {
