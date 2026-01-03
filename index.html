@@ -1548,6 +1548,22 @@ class PhysicsController {
     }
 }
 
+    cancelCurrentAction() {
+        // 1. Stop Drawing flags
+        this.state.isDrawing = false;
+        this.state.isSelecting = false;
+        this.state.activeMathTool = null;
+        this.state.dragHandle = null;
+
+        // 2. Nuke the temporary data
+        this.state.currentPath = null;
+        this.state.tempObject = null;
+        this.state.selectionRect = null;
+
+        // 3. Clear the visual "dot" or "shape" from the screen
+        this.tempCtx.clearRect(0, 0, this.tempCanvas.width, this.tempCanvas.height);
+    }
+
         init() {
             // Event Listeners
             this.wrapper.appendChild(this.textEditor);
@@ -3742,6 +3758,7 @@ class RadialMenu {
             const t = e.touches[0];
             startX = t.clientX; startY = t.clientY;
             touchTimer = setTimeout(() => {
+                if (typeof app !== 'undefined') app.cancelCurrentAction();
                 this.show(startX, startY);
                 if (navigator.vibrate) navigator.vibrate(50);
             }, 500);
