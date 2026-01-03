@@ -3015,21 +3015,32 @@ onUp(e) {
 
        
 
+// REPLACE your existing 'translateSelectedText' function with this:
+
 async translateSelectedText() {
     if (this.state.selectedObjects.length !== 1 || this.state.selectedObjects[0].type !== 'text') {
         alert("Please select a single text object to translate.");
         return;
     }
 
-    // Get Languages
+    // 1. Get Target Language
     const floatSelect = document.getElementById('ctxLangSelect');
     const sideSelect = document.getElementById('targetLang');
-    const lang = (floatSelect && floatSelect.offsetParent !== null) ? floatSelect.value : (sideSelect ? sideSelect.value : 'French');
+    const langName = (floatSelect && floatSelect.offsetParent !== null) ? floatSelect.value : (sideSelect ? sideSelect.value : 'French');
+
+    // 2. Map Full Names to ISO Codes (Required for APIs)
+    const langMap = {
+        "French": "fr", "Spanish": "es", "German": "de", "Italian": "it",
+        "Chinese (Mandarin)": "zh", "Arabic": "ar", "Japanese": "ja", "Hindi": "hi",
+        "Turkish": "tr", "Korean": "ko", "Portuguese": "pt", "Russian": "ru",
+        "Dutch": "nl", "Polish": "pl", "Vietnamese": "vi", "Thai": "th"
+    };
+    const targetCode = langMap[langName] || "fr"; // Default to French if unknown
 
     const originalObj = this.state.selectedObjects[0];
     const originalText = originalObj.text;
 
-    // Create "Translating..." placeholder
+    // 3. Create "Translating..." placeholder
     const translatedObj = { 
         type: 'text', 
         x: originalObj.x, 
@@ -3043,37 +3054,22 @@ async translateSelectedText() {
     this.getCurrentObjects().push(translatedObj);
     this.draw(); 
 
-    // --- CHECK THIS URL MATCHES EXACTLY ---
-    const url = `/.netlify/functions/gemini`; 
-    // --------------------------------------
-
     try {
-        const response = await fetch(url, { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ 
-    contents: [{ 
-        parts: [{ 
-            
-            text: `Translate to ${lang}: ${originalText}` 
-        }] 
-    }] 
-})
-        });
+        // 4. Use MyMemory API (Free, No Key)
+        const sourceLang = "autodetect"; // Let the API guess the source
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(originalText)}&langpair=${sourceLang}|${targetCode}`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
 
-        if (!response.ok) {
-            // This block handles the 404 or 500 error gracefully
-            const text = await response.text();
-            if (text.startsWith("<!DOCTYPE")) {
-                 throw new Error(`Server Error ${response.status} (Not Found). Check your folder structure.`);
-            }
-            throw new Error(`Server Error: ${text}`);
+        if (data.responseStatus !== 200) {
+            throw new Error(data.responseDetails || "Translation failed");
         }
 
-        const data = await response.json();
-        const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Translation Error";
-
-        translatedObj.text = resultText.trim();
+        // 5. Update the text with the result
+        translatedObj.text = data.responseData.translatedText;
+        
+        // Select the new text so the user sees it immediately
         this.state.selectedObjects = [translatedObj];
         this.updateSelectionUI();
         this.draw();
@@ -3820,51 +3816,41 @@ const radialMenu = new RadialMenu();
     removeTyping(typingId); 
     appendMessage(response, 'bot');
 }
-  async function fetchGemini(userText) {
-    const contextPrompt = `
-    You are an AI Tutor embedded in a whiteboard app called WorkSlate. 
-    Keep answers concise, helpful, and formatted nicely.
-    User Question: ${userText}
+ async function fetchGemini(userText) {
+    // 1. UPDATED System Prompt: Explicitly requests LaTeX
+    const systemPrompt = `
+    You are a helpful AI Tutor embedded in a whiteboard app.
+    - Keep answers concise, clear, and friendly. Remember that this is to be used in an educational setting so should consider suitable safeguarding for students when giving replies.
+    - IMPORTANT: Always use LaTeX for mathematical expressions.
+    - Wrap inline math in single dollar signs (e.g., $x^2$).
+    - Wrap block equations in double dollar signs (e.g., $$E=mc^2$$).
+    - Do not use markdown bolding (**) inside the LaTeX blocks.
     `;
-
-    // Correct URL
-const url = `/.netlify/functions/gemini`;
     
+    const url = 'https://text.pollinations.ai/';
+
     try {
-        const response = await fetch(url, { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ 
-                contents: [{ parts: [{ text: contextPrompt }] }] 
-            }) 
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages: [
+                    { role: 'system', content: systemPrompt }, 
+                    { role: 'user', content: userText }
+                ],
+                model: 'openai', // 'openai' is usually best for math; 'mistral' is a good backup
+                seed: 42
+            })
         });
-        
-        // Safety: If server fails, get text first to avoid JSON parse crash
-        if (!response.ok) {
-            const text = await response.text();
-            let errorMessage = text;
-            try {
-                // Try to see if the error text is actually JSON
-                const jsonErr = JSON.parse(text);
-                errorMessage = jsonErr.error || jsonErr.message || text;
-            } catch (e) {
-                // It was plain text, keep it as is
-            }
-            throw new Error(errorMessage);
-        }
 
-        const data = await response.json();
+        if (!response.ok) throw new Error("AI Service Busy");
         
-        // Validate response structure
-        if (!data.candidates || data.candidates.length === 0) {
-             return "I'm sorry, I couldn't generate a response.";
-        }
-        
-        return data.candidates[0].content.parts[0].text;
+        const text = await response.text();
+        return text;
 
-    } catch (e) { 
-        console.error("Gemini Error:", e);
-        return "Error: " + e.message; 
+    } catch (e) {
+        console.error("AI Error:", e);
+        return "I'm having trouble connecting to the brain. Please try again in a moment!";
     }
 }
 function showTyping() {
