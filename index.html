@@ -1677,10 +1677,11 @@ this.textEditor.addEventListener('touchstart', (e) => e.stopPropagation());
         reader.onload = (event) => {
             const img = new Image();
             img.onload = () => {
-                // 1. Resize huge images to a reasonable default size (e.g., max 400px)
+                // 1. Resize huge images to a reasonable default size
+                // CHANGED: Increased from 400 to 1024 for better quality
                 let w = img.width;
                 let h = img.height;
-                const maxSize = 400;
+                const maxSize = 1024; 
                 
                 if (w > maxSize || h > maxSize) {
                     const ratio = Math.min(maxSize / w, maxSize / h);
@@ -1697,7 +1698,7 @@ this.textEditor.addEventListener('touchstart', (e) => e.stopPropagation());
                     h: h,
                     src: event.target.result, // Data URL for saving/loading
                     rotation: 0,
-                    scaleX: 1, // Needed for your Flip Logic
+                    scaleX: 1, 
                     scaleY: 1
                 };
 
@@ -1707,7 +1708,10 @@ this.textEditor.addEventListener('touchstart', (e) => e.stopPropagation());
                 this.state.selectedObjects = [imgObj];
                 this.updateSelectionUI();
                 
+                // Trigger the baking process since we added a new static object
+                this.needsBake = true;
                 this.draw();
+                
                 this.saveLocal();
                 this.saveHistory();
             };
