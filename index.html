@@ -3057,7 +3057,7 @@ async translateSelectedText() {
     try {
         // 4. Use MyMemory API (Free, No Key)
         const sourceLang = "autodetect"; // Let the API guess the source
-        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(originalText)}&langpair=${sourceLang}|${targetCode}`;
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(originalText)}&langpair=${sourceLang}|${targetCode}&de=andyrwilkins123@gmail.com`;
         
         const response = await fetch(url);
         const data = await response.json();
