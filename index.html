@@ -699,7 +699,41 @@ Contact: andyrwilkins123@gmail.com -->
     background: #ef4444; color: white; border: none;
 }
 .radial-center:hover { background: #dc2626; color: white; }
-        
+        /* AI Key Stage Buttons */
+#agent-level-select {
+    display: flex;
+    justify-content: space-evenly;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.8);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.lvl-btn {
+    background: white;
+    border: 1px solid #cbd5e1;
+    color: #64748b;
+    padding: 4px 8px; /* Slightly tighter padding to fit 5 buttons */
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex: 1; /* Distribute space evenly */
+    margin: 0 2px;
+    text-align: center;
+}
+
+.lvl-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.lvl-btn.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #2563eb;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
     </style>
 </head>
 <body>
@@ -1099,23 +1133,32 @@ Contact: andyrwilkins123@gmail.com -->
     </div>
 </div>
    <div id="agent-chat-window">
-        <div id="agent-header">
-            <span>AI Tutor Assistant</span>
-            <button onclick="toggleChat()" 
-                    style="background:none; border:none; color:#ef4444; font-size:28px; font-weight:bold; cursor:pointer; line-height:1;"
-                    onmouseover="this.style.transform='scale(1.2)'" 
-                    onmouseout="this.style.transform='scale(1)'">
-                &times;
-            </button>
-        </div>
-        <div id="agent-messages">
-            <div class="message bot-message">Hello! I can help with Maths, Science, Languages, and more. What do you need to know?</div>
-        </div>
-        <div id="agent-input-area">
-            <input type="text" id="agent-input" placeholder="Type your question..." onkeypress="handleEnter(event)">
-            <button onclick="sendMessage()" style="background:#1a2a6c; color:white; border:none; width:45px; height:40px; border-radius:6px; cursor:pointer;">➤</button>
-        </div>
+    <div id="agent-header">
+        <span>AI Tutor Assistant</span>
+        <button onclick="toggleChat()" 
+                style="background:none; border:none; color:#ef4444; font-size:28px; font-weight:bold; cursor:pointer; line-height:1;"
+                onmouseover="this.style.transform='scale(1.2)'" 
+                onmouseout="this.style.transform='scale(1)'">
+            &times;
+        </button>
     </div>
+    
+    <div id="agent-level-select">
+        <button class="lvl-btn active" onclick="setAILevel('KS1')">KS1</button>
+        <button class="lvl-btn" onclick="setAILevel('KS2')">KS2</button>
+        <button class="lvl-btn" onclick="setAILevel('KS3')">KS3</button>
+        <button class="lvl-btn" onclick="setAILevel('KS4')">KS4</button>
+        <button class="lvl-btn" onclick="setAILevel('KS5')">KS5</button>
+    </div>
+
+    <div id="agent-messages">
+        <div class="message bot-message">Hello! Select a Key Stage above and ask me anything!</div>
+    </div>
+    <div id="agent-input-area">
+        <input type="text" id="agent-input" placeholder="Type your question..." onkeypress="handleEnter(event)">
+        <button onclick="sendMessage()" style="background:#1a2a6c; color:white; border:none; width:45px; height:40px; border-radius:6px; cursor:pointer;">➤</button>
+    </div>
+</div>
 <div id="radialOverlay" class="radial-overlay" onclick="radialMenu.hide()">
     <div id="radialMenu" class="radial-menu">
         <div class="radial-btn radial-center" onclick="radialMenu.hide()">
@@ -3802,23 +3845,52 @@ window.radialMenu = new RadialMenu();
 const radialMenu = new RadialMenu();
     // AI Chat Functions
     
-    function toggleChat() { 
-        const w = document.getElementById('agent-chat-window'); 
-        // Check if it is currently visible (flex); if so, hide it. Otherwise, show it.
-        w.style.display = (w.style.display === 'flex') ? 'none' : 'flex'; 
-    }
-    function handleEnter(e) { if (e.key === 'Enter') sendMessage(); }
-   
-    function appendMessage(text, sender) {
-        const container = document.getElementById('agent-messages');
-        const msg = document.createElement('div');
-        msg.className = `message ${sender}-message`;
-        msg.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
-        container.appendChild(msg);
-        container.scrollTop = container.scrollHeight;
-        if (window.MathJax) MathJax.typesetPromise([msg]);
-    }
-    async function sendMessage() {
+   // ===========================================
+//  AI CHAT FUNCTIONS (Replace your old block)
+// ===========================================
+
+// 1. STATE VARIABLE & LEVEL SELECTOR
+let currentAILevel = 'KS1'; 
+
+function setAILevel(level) {
+    currentAILevel = level;
+    
+    // Update active button state in the UI
+    document.querySelectorAll('.lvl-btn').forEach(btn => {
+        if (btn.innerText === level) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+}
+
+// 2. CHAT UI FUNCTIONS
+function toggleChat() { 
+    const w = document.getElementById('agent-chat-window'); 
+    w.style.display = (w.style.display === 'flex') ? 'none' : 'flex'; 
+}
+
+function handleEnter(e) { 
+    if (e.key === 'Enter') sendMessage(); 
+}
+
+function appendMessage(text, sender) {
+    const container = document.getElementById('agent-messages');
+    const msg = document.createElement('div');
+    msg.className = `message ${sender}-message`;
+    
+    // Convert bold markdown to HTML for cleaner look
+    msg.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+    
+    container.appendChild(msg);
+    container.scrollTop = container.scrollHeight;
+    
+    // Trigger MathJax to render the LaTeX (if loaded)
+    if (window.MathJax) MathJax.typesetPromise([msg]);
+}
+
+async function sendMessage() {
     const input = document.getElementById('agent-input');
     const text = input.value.trim();
     if (!text) return;
@@ -3828,48 +3900,13 @@ const radialMenu = new RadialMenu();
     
     const typingId = showTyping(); 
     
+    // Call the updated API function
     const response = await fetchGemini(text);
     
     removeTyping(typingId); 
     appendMessage(response, 'bot');
 }
- async function fetchGemini(userText) {
-    // 1. UPDATED System Prompt: Explicitly requests LaTeX
-    const systemPrompt = `
-    You are a helpful AI Tutor embedded in a whiteboard app.
-    - Keep answers concise, clear, and friendly. Remember that this is to be used in an educational setting so should consider suitable safeguarding for students when giving replies.
-    - IMPORTANT: Always use LaTeX for mathematical expressions.
-    - Wrap inline math in single dollar signs (e.g., $x^2$).
-    - Wrap block equations in double dollar signs (e.g., $$E=mc^2$$).
-    - Do not use markdown bolding (**) inside the LaTeX blocks.
-    `;
-    
-    const url = 'https://text.pollinations.ai/';
 
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                messages: [
-                    { role: 'system', content: systemPrompt }, 
-                    { role: 'user', content: userText }
-                ],
-                model: 'openai', // 'openai' is usually best for math; 'mistral' is a good backup
-                seed: 42
-            })
-        });
-
-        if (!response.ok) throw new Error("AI Service Busy");
-        
-        const text = await response.text();
-        return text;
-
-    } catch (e) {
-        console.error("AI Error:", e);
-        return "I'm having trouble connecting to the brain. Please try again in a moment!";
-    }
-}
 function showTyping() {
     const container = document.getElementById('agent-messages');
     const id = 'typing-' + Date.now();
@@ -3887,6 +3924,58 @@ function showTyping() {
 function removeTyping(id) {
     const el = document.getElementById(id);
     if(el) el.remove();
+}
+
+// 3. MAIN API FUNCTION (UPDATED)
+async function fetchGemini(userText) {
+    // Define the persona based on the selected level (KS1 - KS5)
+    const levelPrompts = {
+        'KS1': "Explain simply for a 5-7 year old child. Use short sentences, fun analogies, and very basic vocabulary.",
+        'KS2': "Explain for a 7-11 year old student. Use clear language, helpful examples, and avoid overly complex jargon.",
+        'KS3': "Explain for a 11-14 year old student. You can use subject-specific terminology but explain it clearly.",
+        'KS4': "Explain for a 14-16 year old student (GCSE level). Use formal academic language and precise terminology suitable for exams.",
+        'KS5': "Explain for a 16-18 year old student (A-Level/College). Use advanced academic language, deep technical detail, and assume strong prior knowledge."
+    };
+
+    const levelInstruction = levelPrompts[currentAILevel] || levelPrompts['KS1'];
+
+    // System Prompt: Strictly enforces LaTeX brackets \( \) and bans $
+    const systemPrompt = `
+    You are a helpful AI Tutor embedded in a whiteboard app.
+    - **Target Audience:** ${currentAILevel} (${levelInstruction})
+    - Keep answers concise, clear, and friendly.
+    - **MATH FORMATTING RULES:** - Use LaTeX for all mathematical expressions.
+      - **IMPORTANT: DO NOT use dollar signs ($) anywhere.**
+      - Instead, strictly use the bracket syntax:
+      - Use \\( and \\) for inline math. Example: \\( x^2 + y^2 = r^2 \\)
+      - Use \\[ and \\] for block equations. Example: \\[ E = mc^2 \\]
+    `;
+    
+    const url = 'https://text.pollinations.ai/';
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages: [
+                    { role: 'system', content: systemPrompt }, 
+                    { role: 'user', content: userText }
+                ],
+                model: 'openai', 
+                seed: 42
+            })
+        });
+
+        if (!response.ok) throw new Error("AI Service Busy");
+        
+        const text = await response.text();
+        return text;
+
+    } catch (e) {
+        console.error("AI Error:", e);
+        return "I'm having trouble connecting to the brain. Please try again in a moment!";
+    }
 }
 </script>
    </body>
