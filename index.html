@@ -1548,6 +1548,9 @@ class PhysicsController {
             this.tempCanvas = document.getElementById('tempCanvas');
             this.tempCtx = this.tempCanvas.getContext('2d');
             this.wrapper = document.getElementById('canvas-wrapper');
+            this.cacheCanvas = document.createElement('canvas');
+    this.cacheCtx = this.cacheCanvas.getContext('2d');
+    this.needsBake = true; // Flag to trigger a redraw
             this.textEditor = document.getElementById('textEditor');
             this.fileHandle = null;
             this.history = [];
@@ -1893,33 +1896,37 @@ this.textEditor.addEventListener('touchstart', (e) => e.stopPropagation());
     }
 }
 
-        undo() {
-            if (this.historyStep > 0) {
-                const item = this.history[this.historyStep];
-                this.historyStep--;                
-                if (item.type === 'full') {               
-                    this.restoreHistoryState(this.history[this.historyStep]);
-                } else if (item.type === 'delta') { 
-                    this.state.slides[item.slideIndex] = this.getDeepCopy(item.before);
-                    if(this.lastStableState) this.lastStableState[item.slideIndex] = this.getDeepCopy(item.before);
-                    this.finishRestore();
-                }
+       undo() {
+        if (this.historyStep > 0) {
+            const item = this.history[this.historyStep];
+            this.historyStep--;                
+            if (item.type === 'full') {               
+                this.restoreHistoryState(this.history[this.historyStep]);
+            } else if (item.type === 'delta') { 
+                this.state.slides[item.slideIndex] = this.getDeepCopy(item.before);
+                if(this.lastStableState) this.lastStableState[item.slideIndex] = this.getDeepCopy(item.before);
+                
+                // This function now handles the bake and draw for us
+                this.finishRestore();
             }
         }
+    }
 
-        redo() {
-            if (this.historyStep < this.history.length - 1) {
-                this.historyStep++; 
-                const item = this.history[this.historyStep];
-                if (item.type === 'full') {
-                    this.restoreHistoryState(item);
-                } else if (item.type === 'delta') {
-                    this.state.slides[item.slideIndex] = this.getDeepCopy(item.after);
-                    if(this.lastStableState) this.lastStableState[item.slideIndex] = this.getDeepCopy(item.after);
-                    this.finishRestore();
-                }
+    redo() {
+        if (this.historyStep < this.history.length - 1) {
+            this.historyStep++; 
+            const item = this.history[this.historyStep];
+            if (item.type === 'full') {
+                this.restoreHistoryState(item);
+            } else if (item.type === 'delta') {
+                this.state.slides[item.slideIndex] = this.getDeepCopy(item.after);
+                if(this.lastStableState) this.lastStableState[item.slideIndex] = this.getDeepCopy(item.after);
+                
+                // This function now handles the bake and draw for us
+                this.finishRestore();
             }
         }
+    }
 
         restoreHistoryState(historyItem) {
             if (!historyItem) return;
@@ -1931,12 +1938,18 @@ this.textEditor.addEventListener('touchstart', (e) => e.stopPropagation());
             this.finishRestore();
         }
 
-        finishRestore() {
-            this.state.selectedObjects = [];
-            this.updateSelectionUI();
-            this.draw();
-            this.saveLocal();
-        }
+       finishRestore() {
+        this.state.selectedObjects = [];
+        this.updateSelectionUI();
+        
+        // CRITICAL FIX: Tell the app to update the cache BEFORE drawing
+        this.needsBake = true;
+        
+        // Now draw. Because needsBake is true, this will refresh the static layer instantly.
+        this.draw();
+        
+        this.saveLocal();
+    }
         // --- UI UPDATES ---
  updateSelectionUI() {
         // 1. Highlight Dock Icon
@@ -1949,6 +1962,7 @@ this.textEditor.addEventListener('touchstart', (e) => e.stopPropagation());
 
         // 3. TRIGGER THE SMART SIDEBAR
         this.updateContextualSidebar();
+     this.needsBake = true
     }
 
   updateContextBar() {
@@ -2087,60 +2101,95 @@ if (left + barWidth > window.innerWidth) {
         bar.style.left = left + 'px';
         bar.style.top = top + 'px';
     }
+        bakeStatic() {
+    // Clear the cache
+    this.cacheCtx.clearRect(0, 0, this.cacheCanvas.width, this.cacheCanvas.height);
+    
+    const objs = this.getCurrentObjects();
+    if (!objs) return;
+
+    // Draw ONLY objects that are NOT currently selected
+    // (Selected objects are drawn "live" in the main draw loop)
+    objs.forEach(o => {
+        if (!this.state.selectedObjects.includes(o)) {
+            // Treat eraser paths specially if needed, or just draw
+            if (o.type === 'path' && o.isEraser) {
+                this.cacheCtx.globalCompositeOperation = 'destination-out';
+                this.drawEraserPath(o, this.cacheCtx); // Pass cacheCtx
+                this.cacheCtx.globalCompositeOperation = 'source-over';
+            } else {
+                this.drawObject(o, this.cacheCtx); // Pass cacheCtx
+            }
+        }
+    });
+    
+    this.needsBake = false;
+}
         // --- DRAWING ENGINE ---
         draw() {
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            this.ctx.save();
-            const objs = this.getCurrentObjects();
-            
-            if (objs) {
-                objs.forEach(o => {
-                    if (o.type === 'path' && o.isEraser) { 
-                        this.ctx.globalCompositeOperation = 'destination-out'; 
-                        this.drawEraserPath(o); 
-                        this.ctx.globalCompositeOperation = 'source-over'; 
-                    } else {
-                        this.drawObject(o);
-                    }
-                });
-            }
+    // 1. If Physics is running, everything moves, so we must redraw everything (no caching)
+    if (this.physics && this.physics.isActive) {
+        this.needsBake = true;
+    }
 
-            this.state.selectedObjects.forEach(o => this.drawSelection(o));
-            
-            if(this.state.isSelecting && this.state.selectionRect) {
-                const r = this.state.selectionRect;
-                this.ctx.strokeStyle = '#007acc'; this.ctx.lineWidth = 1; this.ctx.setLineDash([5, 5]);
-                this.ctx.strokeRect(r.x, r.y, r.w, r.h);
-                this.ctx.fillStyle = 'rgba(0, 122, 204, 0.1)';
-                this.ctx.fillRect(r.x, r.y, r.w, r.h);
-            }
-            
-            if(this.state.tempObject) this.drawObject(this.state.tempObject);
-            if(this.state.currentPath) { 
-                if(this.state.currentPath.isEraser) { 
-                    this.ctx.globalCompositeOperation='destination-out'; 
-                    this.drawEraserPath(this.state.currentPath); 
-                } else {
-                    this.drawObject(this.state.currentPath); 
-                }
-            }
-            this.ctx.restore();
-            
-            if(this.state.showRuler) this.drawRuler();
-            if(this.state.showProtractor) this.drawProtractor();
-            if(this.state.showCompass) this.drawCompass();
-        }
+    // 2. Update Cache if needed
+    if (this.needsBake) {
+        this.bakeStatic();
+    }
 
-        drawEraserPath(o) {
-            this.ctx.lineWidth = (o.width || 20) * 2; 
-            this.ctx.lineCap = 'round'; this.ctx.lineJoin = 'round';
-            this.ctx.beginPath();
-            if(o.points.length > 0) {
-                this.ctx.moveTo(o.points[0].x, o.points[0].y);
-                for (let i = 1; i < o.points.length; i++) this.ctx.lineTo(o.points[i].x, o.points[i].y);
-            }
-            this.ctx.stroke();
+    // 3. Clear Main Screen
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    // 4. Draw the Cached Layer (One single fast operation!)
+    this.ctx.drawImage(this.cacheCanvas, 0, 0);
+
+    // 5. Draw "Live" Objects (Selection) on top
+    this.state.selectedObjects.forEach(o => {
+        this.drawObject(o, this.ctx);
+        this.drawSelection(o);
+    });
+
+    // 6. Draw UI Extras (Selection Box, Temp Objects)
+    this.ctx.save();
+    if(this.state.isSelecting && this.state.selectionRect) {
+        const r = this.state.selectionRect;
+        this.ctx.strokeStyle = '#007acc'; this.ctx.lineWidth = 1; this.ctx.setLineDash([5, 5]);
+        this.ctx.strokeRect(r.x, r.y, r.w, r.h);
+        this.ctx.fillStyle = 'rgba(0, 122, 204, 0.1)';
+        this.ctx.fillRect(r.x, r.y, r.w, r.h);
+    }
+    
+    if(this.state.tempObject) this.drawObject(this.state.tempObject);
+    
+    // Draw Current Stroke (Live Drawing)
+    if(this.state.currentPath) { 
+        if(this.state.currentPath.isEraser) { 
+            this.ctx.globalCompositeOperation='destination-out'; 
+            this.drawEraserPath(this.state.currentPath, this.ctx); 
+            this.ctx.globalCompositeOperation='source-over';
+        } else {
+            this.drawObject(this.state.currentPath, this.ctx); 
         }
+    }
+    this.ctx.restore();
+    
+    // Draw Tools
+    if(this.state.showRuler) this.drawRuler();
+    if(this.state.showProtractor) this.drawProtractor();
+    if(this.state.showCompass) this.drawCompass();
+}
+
+        // Update signature to accept ctx
+drawEraserPath(o, ctx = this.ctx) {
+    ctx.lineWidth = (o.width || 20) * 2; 
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    if(o.points.length > 0) {
+        ctx.moveTo(o.points[0].x, o.points[0].y);
+        for (let i = 1; i < o.points.length; i++) ctx.lineTo(o.points[i].x, o.points[i].y);
+    }
+    ctx.stroke();
+}
 
         drawObject(o, ctx = this.ctx) {
             if (o.isBeingEdited) return;
@@ -2849,9 +2898,12 @@ onUp(e) {
         }
         
         // 4. Final Redraw and Save
+    this.needsBake = true; 
+        this.draw();           
         this.draw();         
         this.saveLocal();    
-        this.saveHistory();  
+        this.saveHistory(); 
+    
     }
    
 
@@ -3020,12 +3072,22 @@ onUp(e) {
         this.saveHistory();
     }
         
-        deleteSelected() { 
-            const s = this.getCurrentObjects(); 
-            this.state.slides[this.state.currentSlide] = s.filter(o => !this.state.selectedObjects.includes(o)); 
-            this.state.selectedObjects = []; this.updateSelectionUI(); 
-            this.draw(); this.saveLocal(); this.saveHistory(); 
-        }
+       deleteSelected() { 
+        const s = this.getCurrentObjects(); 
+        
+        // Filter out the selected objects
+        this.state.slides[this.state.currentSlide] = s.filter(o => !this.state.selectedObjects.includes(o)); 
+        
+        this.state.selectedObjects = []; 
+        this.updateSelectionUI(); 
+        
+        // CRITICAL FIX: We removed items, so the static layer is dirty.
+        this.needsBake = true;
+        this.draw(); 
+        
+        this.saveLocal(); 
+        this.saveHistory(); 
+    }
         
         toggleRuler() { this.state.showRuler = !this.state.showRuler; this.draw(); }
         toggleProtractor() { this.state.showProtractor = !this.state.showProtractor; this.draw(); }
@@ -3330,6 +3392,7 @@ updateTextColor(val) {
         } catch (err) { 
             alert("Error parsing project file."); 
         }
+        this.needsBake = true
     }
 
     async saveProject() {
@@ -3553,18 +3616,22 @@ updateTextColor(val) {
 
         // --- GRID ---
         resizeCanvas() { 
-            const w = this.wrapper.clientWidth; 
-            const h = this.wrapper.clientHeight; 
-    
-            this.canvas.width = w; this.canvas.height = h; 
-            this.bgCanvas.width = w; this.bgCanvas.height = h;
-    
-            // NEW: Resize Temp Canvas
-            this.tempCanvas.width = w; this.tempCanvas.height = h;
-    
-            this.drawGrid(); 
-            this.draw(); 
-        }
+    const w = this.wrapper.clientWidth; 
+    const h = this.wrapper.clientHeight; 
+
+    this.canvas.width = w; this.canvas.height = h; 
+    this.bgCanvas.width = w; this.bgCanvas.height = h;
+    this.tempCanvas.width = w; this.tempCanvas.height = h;
+
+    // --- NEW: Resize Cache ---
+    this.cacheCanvas.width = w; 
+    this.cacheCanvas.height = h;
+    this.needsBake = true; // Force a re-render on resize
+    // -------------------------
+
+    this.drawGrid(); 
+    this.draw(); 
+}
         drawGrid() {
             const s = this.state.gridSize; const w = this.bgCanvas.width; const h = this.bgCanvas.height;
             let bgColor = '#FDF5E6'; 
