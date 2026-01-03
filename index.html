@@ -1593,7 +1593,94 @@ class PhysicsController {
         }
     }
 }
+// --- NEW TRUE ERASER LOGIC ---
+eraseAt(mx, my) {
+    const eraserRadius = (this.state.penSize || 10) * 2; // Eraser is wider than pen
+    const currentObjs = this.getCurrentObjects();
+    const survivors = [];
+    let somethingChanged = false;
 
+    currentObjs.forEach(obj => {
+        if (obj.locked) {
+            survivors.push(obj);
+            return;
+        }
+
+        // 1. ERASE DRAWINGS (The Laser Cutter)
+        if (obj.type === 'path') {
+            // Quick check: Is the eraser even near this object?
+            const b = this.getObjectBounds(obj);
+            if (mx < b.x - eraserRadius || mx > b.x + b.w + eraserRadius || 
+                my < b.y - eraserRadius || my > b.y + b.h + eraserRadius) {
+                survivors.push(obj);
+                return;
+            }
+
+            // It's close. Now check individual points.
+            const newSegments = [];
+            let currentPoints = [];
+            let touched = false;
+
+            for (let i = 0; i < obj.points.length; i++) {
+                const p = obj.points[i];
+                const dist = Math.hypot(p.x - mx, p.y - my);
+
+                if (dist > eraserRadius) {
+                    // This point is safe
+                    currentPoints.push(p);
+                } else {
+                    // This point is DESTROYED
+                    touched = true;
+                    // If we have a valid line segment accumulated, save it
+                    if (currentPoints.length > 1) {
+                        // Create a clone of the original path style
+                        const fragment = JSON.parse(JSON.stringify(obj));
+                        fragment.points = currentPoints;
+                        // Important: Erasing creates new paths, so we can't keep the isEraser flag
+                        delete fragment.isEraser; 
+                        newSegments.push(fragment);
+                    }
+                    currentPoints = []; // Start fresh
+                }
+            }
+
+            // Save the final trailing segment
+            if (currentPoints.length > 1) {
+                const fragment = JSON.parse(JSON.stringify(obj));
+                fragment.points = currentPoints;
+                delete fragment.isEraser;
+                newSegments.push(fragment);
+            }
+
+            if (touched) {
+                somethingChanged = true;
+                // Add all the new fragments to the survivors list
+                survivors.push(...newSegments);
+            } else {
+                survivors.push(obj);
+            }
+        } 
+        
+        // 2. ERASE SHAPES (The Delete Key)
+        else {
+            // For shapes, we use the bounding box or hit test
+            // We require the eraser to be reasonably close to the object center or hit it directly
+            if (this.hitTest(mx, my, obj)) {
+                // It's hit! It dies immediately.
+                somethingChanged = true;
+                // Do NOT push to survivors. It is gone.
+            } else {
+                survivors.push(obj);
+            }
+        }
+    });
+
+    if (somethingChanged) {
+        this.state.slides[this.state.currentSlide] = survivors;
+        this.needsBake = true; // Rerender static layer
+        this.draw();
+    }
+}
     cancelCurrentAction() {
         // 1. Stop Drawing flags
         this.state.isDrawing = false;
@@ -2605,241 +2692,262 @@ toLocal(mx, my, ox, oy, rot) {
         ly: dx * Math.sin(-rot) + dy * Math.cos(-rot)
     };
 }
-        onDown(e) {
-            const {x, y} = this.getPos(e);
-            this.state.startX = x; this.state.startY = y; this.state.lastX = x; this.state.lastY = y;
-            this.state.isDrawing = false; 
-            
-            if(this.state.editingText) { 
-                if(e.target !== this.textEditor) this.finalizeTextEntry(); 
-                return; 
-            }
-            
-       if (this.checkMathToolHit(x, y)) {
-    if(this.state.activeMathTool === 'compass' && this.state.mathAction === 'draw') {
-        const c = this.state.compass;
-        const angle = Math.atan2(y - c.y, x - c.x);
-        const startX = c.x + c.r * Math.cos(angle);
-        const startY = c.y + c.r * Math.sin(angle);
-        
-        this.state.currentPath = { 
-            type: 'path', 
-            points: [{x: startX, y: startY}], 
-            color: this.state.color, 
-            width: this.state.penSize, 
-            penType: this.state.penType
-        };
-        this.state.isDrawing = true;
-    }
-    return;
-}
-
-            if (this.state.tool === 'select') {
-                if (this.state.selectedObjects.length === 1 && !this.state.selectedObjects[0].locked) {
-                    const handle = this.checkHandleHit(x, y, this.state.selectedObjects[0]);
-                    if (handle) { this.state.dragHandle = handle; return; }
-                }
-                const found = this.findObject(x, y);
-                if (found) {
-                    this.state.selectedObjects = [found];
-                    this.state.dragHandle = 'move';
-                    this.updateSelectionUI();
-                } else {
-                    this.state.selectedObjects = [];
-                    this.state.isSelecting = true;
-                    this.state.selectionRect = { x, y, w: 0, h: 0 };
-                    this.updateSelectionUI();
-                }
-                this.draw(); return;
-            }
-
-            this.state.isDrawing = true; 
-            if (this.state.tool === 'pen' || this.state.tool === 'eraser') {
-                this.state.currentPath = { type: 'path', points: [{x,y}], color: this.state.color, width: this.state.penSize, isEraser: (this.state.tool === 'eraser'), penType: this.state.penType, rotation: 0 };
-            } else if (this.state.tool === 'text') {
-                const found = this.findObject(x, y);
-                if (found && found.type === 'text') {
-                    this.startTextEntry(found.x, found.y, found);
-                } else {
-                    this.startTextEntry(x, y);
-                }
-                this.state.isDrawing = false;
-            } else if (this.state.tool === 'poly') {
-                this.getCurrentObjects().push({ type: 'poly', x, y, radius: 50, sides: this.state.polySides || 5, color: this.state.color, width: this.state.penSize, rotation: 0, filled: false });
-                this.state.isDrawing = false; this.setTool('select');
-                this.state.selectedObjects = [this.getCurrentObjects()[this.getCurrentObjects().length-1]];
-                this.updateSelectionUI(); this.draw(); this.saveLocal(); this.saveHistory();
-            } else {
-                if (this.state.tool === 'rect') this.state.tempObject = { type:'rect', x, y, w:0, h:0, color:this.state.color, width:this.state.penSize, rotation:0, filled:false };
-                else if (this.state.tool === 'circle') this.state.tempObject = { type:'circle', x, y, radius:0, color:this.state.color, width:this.state.penSize, rotation:0, filled:false };
-                else if (this.state.tool === 'line') this.state.tempObject = { type:'line', x1:x, y1:y, x2:x, y2:y, color:this.state.color, width:this.state.penSize };
-            }
-        }
-
-onMove(e) {
-    // 1. Get Coordinates
-    const r = this.canvas.getBoundingClientRect();
-    const rawX = e.clientX - r.left;
-    const rawY = e.clientY - r.top;
-    const {x, y} = this.getPos(e); 
-
-    // 2. Hover Effects (Cursors)
-    if (!this.state.isDrawing && !this.state.dragHandle && !this.state.activeMathTool && !this.state.isSelecting) {
-        const hover = this.getHoverInfo(rawX, rawY); 
-        this.tempCanvas.style.cursor = hover ? hover.cursor : 'default';
-        const prevHover = this.state.hoveredAction;
-        const newHover = hover ? hover.action : null;
-        if (prevHover !== newHover) {
-            this.state.hoveredAction = newHover; 
-            this.draw(); 
-        }
-        return; 
-    }
-
-    // 3. Math Tools & Object Manipulation
-    if ((this.state.activeMathTool && this.state.mathAction !== 'draw') || 
-        (this.state.tool === 'select' && (this.state.isSelecting || this.state.dragHandle))) {
-        
-        const dx = x - this.state.lastX;
-        const dy = y - this.state.lastY;
-
-        // A. Math Tools Interaction
-        if (this.state.activeMathTool) {
-            const t = this.state.activeMathTool;
-            const obj = this.state[t];
-            
-            if (this.state.mathAction === 'move') { 
-                obj.x += dx; 
-                obj.y += dy; 
-            }
-            else if (this.state.mathAction === 'rotate' || this.state.mathAction === 'rotate_nodraw') { 
-                const angle = Math.atan2(y - obj.y, x - obj.x);
-                let offset = 0;
-                if (t === 'ruler') offset = Math.atan2(obj.h/2, obj.w + 40);
-                
-                obj.rotation = angle - offset;
-            }
-            else if (this.state.mathAction === 'resize') { 
-                if(obj.w !== undefined) obj.w += dx; 
-                if(obj.r !== undefined) obj.r += dx; 
-            }
-        }
-
-        // B. Selection Box
-        else if (this.state.isSelecting) {
-            if (this.state.selectionRect) {
-                this.state.selectionRect.w = x - this.state.selectionRect.x;
-                this.state.selectionRect.h = y - this.state.selectionRect.y;
-            }
-        }
-
-        // C. Object Dragging (Move/Scale/Rotate Objects)
-        else if (this.state.dragHandle) {
-            const sel = this.state.selectedObjects[0];
-
-            if (this.state.dragHandle === 'move') {
-                this.state.selectedObjects.forEach(o => this.offsetObject(o, dx, dy));
-            }
-            else if (this.state.dragHandle === 'rotate') {
-                const b = this.getObjectBounds(sel);
-                const angle = Math.atan2(y - b.cy, x - b.cx);
-                sel.rotation = angle + Math.PI/2; 
-            }
-            else if (this.state.dragHandle === 'resize') {
-                if (sel.type === 'rect' || sel.type === 'image') {
-                    sel.w += dx; sel.h += dy;
-                } 
-                else if (sel.type === 'circle' || sel.type === 'poly') {
-                    if (sel.radius !== undefined) sel.radius += dx;
-                    else if (sel.r !== undefined) sel.r += dx;
-                }
-                else if (sel.type === 'text') {
-                    sel.fontSize = (sel.fontSize || 20) + (dx * 0.5);
-                    if(sel.fontSize < 5) sel.fontSize = 5;
-                }
-                else {
-                    const s = 1 + (dx * 0.01);
-                    sel.scaleX = (sel.scaleX || 1) * s;
-                    sel.scaleY = (sel.scaleY || 1) * s;
-                }
-            }
-            else if (this.state.dragHandle === 'start') { sel.x1 = x; sel.y1 = y; }
-            else if (this.state.dragHandle === 'end') { sel.x2 = x; sel.y2 = y; }
-        }
-
-        this.state.lastX = x;
-        this.state.lastY = y;
-        this.draw(); 
-        return;
-    }
-
-    // 4. Drawing Logic (Pen, Shapes, AND Compass Drawing)
-    if (this.state.isDrawing) {
-        this.tempCtx.clearRect(0, 0, this.tempCanvas.width, this.tempCanvas.height);
-
-        // Standard Pen/Eraser / Compass
-if (this.state.tool === 'pen' || this.state.tool === 'eraser' || (this.state.activeMathTool === 'compass')) {
-    let drawX = x;
-    let drawY = y;
-
-    // --- COMPASS LOGIC START ---
-    if (this.state.activeMathTool === 'compass') {
-        const c = this.state.compass;
-        // 1. Calculate angle from center to mouse
-        const angle = Math.atan2(y - c.y, x - c.x);
-        
-        // 2. Lock coordinate to exact radius (Perfect Circle)
-        drawX = c.x + c.r * Math.cos(angle);
-        drawY = c.y + c.r * Math.sin(angle);
-        
-        // 3. VISUAL: Spin the compass object in state
-        c.rotation = angle; 
-        this.draw(); 
-    }
-    // --- COMPASS LOGIC END ---
-
-    if(this.state.currentPath) this.state.currentPath.points.push({x: drawX, y: drawY});
-            if(this.state.currentPath) {
-                if(this.state.currentPath.isEraser) {
-                    this.tempCtx.save();
-                    this.tempCtx.strokeStyle = '#fff'; 
-                    this.tempCtx.lineWidth = this.state.penSize; 
-                    this.tempCtx.beginPath();
-                    if(this.state.currentPath.points.length > 0) {
-                        const pts = this.state.currentPath.points;
-                        this.tempCtx.moveTo(pts[0].x, pts[0].y);
-                        for(let i=1; i<pts.length; i++) this.tempCtx.lineTo(pts[i].x, pts[i].y);
-                    }
-                    this.tempCtx.stroke();
-                    this.tempCtx.restore();
-                } else {
-                    this.drawObject(this.state.currentPath, this.tempCtx);
-                }
-            }
-        } 
-        // Shape Dragging (Rect/Circle/Line)
-        else if (this.state.tempObject) {
-            if(this.state.tool === 'rect') { 
-                this.state.tempObject.w = x - this.state.startX; 
-                this.state.tempObject.h = y - this.state.startY; 
-            }
-            else if(this.state.tool === 'circle') { 
-                this.state.tempObject.radius = Math.sqrt((x - this.state.startX)**2 + (y - this.state.startY)**2); 
-            }
-            else if(this.state.tool === 'line') { 
-                this.state.tempObject.x2 = x; 
-                this.state.tempObject.y2 = y; 
-            }
-
-            this.drawObject(this.state.tempObject, this.tempCtx);
-        }
-        
+      onDown(e) {
+        const {x, y} = this.getPos(e);
+        this.state.startX = x; 
+        this.state.startY = y; 
         this.state.lastX = x; 
         this.state.lastY = y;
-    }
-}
+        this.state.isDrawing = false; 
 
+        // --- NEW ERASER LOGIC ---
+        if (this.state.tool === 'eraser') {
+            this.state.isErasing = true;
+            this.eraseAt(x, y); // Erase immediately on click
+            return; // Stop here, don't start a drawing path
+        }
+        // ------------------------
+        
+        if(this.state.editingText) { 
+            if(e.target !== this.textEditor) this.finalizeTextEntry(); 
+            return; 
+        }
+        
+        if (this.checkMathToolHit(x, y)) {
+            if(this.state.activeMathTool === 'compass' && this.state.mathAction === 'draw') {
+                const c = this.state.compass;
+                const angle = Math.atan2(y - c.y, x - c.x);
+                const startX = c.x + c.r * Math.cos(angle);
+                const startY = c.y + c.r * Math.sin(angle);
+                
+                this.state.currentPath = { 
+                    type: 'path', 
+                    points: [{x: startX, y: startY}], 
+                    color: this.state.color, 
+                    width: this.state.penSize, 
+                    penType: this.state.penType
+                };
+                this.state.isDrawing = true;
+            }
+            return;
+        }
+
+        if (this.state.tool === 'select') {
+            if (this.state.selectedObjects.length === 1 && !this.state.selectedObjects[0].locked) {
+                const handle = this.checkHandleHit(x, y, this.state.selectedObjects[0]);
+                if (handle) { this.state.dragHandle = handle; return; }
+            }
+            const found = this.findObject(x, y);
+            if (found) {
+                this.state.selectedObjects = [found];
+                this.state.dragHandle = 'move';
+                this.updateSelectionUI();
+            } else {
+                this.state.selectedObjects = [];
+                this.state.isSelecting = true;
+                this.state.selectionRect = { x, y, w: 0, h: 0 };
+                this.updateSelectionUI();
+            }
+            this.draw(); return;
+        }
+
+        this.state.isDrawing = true; 
+        
+        // NOTE: Eraser removed from here because it's handled at the top
+        if (this.state.tool === 'pen') {
+            this.state.currentPath = { type: 'path', points: [{x,y}], color: this.state.color, width: this.state.penSize, penType: this.state.penType, rotation: 0 };
+        } else if (this.state.tool === 'text') {
+            const found = this.findObject(x, y);
+            if (found && found.type === 'text') {
+                this.startTextEntry(found.x, found.y, found);
+            } else {
+                this.startTextEntry(x, y);
+            }
+            this.state.isDrawing = false;
+        } else if (this.state.tool === 'poly') {
+            this.getCurrentObjects().push({ type: 'poly', x, y, radius: 50, sides: this.state.polySides || 5, color: this.state.color, width: this.state.penSize, rotation: 0, filled: false });
+            this.state.isDrawing = false; this.setTool('select');
+            this.state.selectedObjects = [this.getCurrentObjects()[this.getCurrentObjects().length-1]];
+            this.updateSelectionUI(); this.draw(); this.saveLocal(); this.saveHistory();
+        } else {
+            if (this.state.tool === 'rect') this.state.tempObject = { type:'rect', x, y, w:0, h:0, color:this.state.color, width:this.state.penSize, rotation:0, filled:false };
+            else if (this.state.tool === 'circle') this.state.tempObject = { type:'circle', x, y, radius:0, color:this.state.color, width:this.state.penSize, rotation:0, filled:false };
+            else if (this.state.tool === 'line') this.state.tempObject = { type:'line', x1:x, y1:y, x2:x, y2:y, color:this.state.color, width:this.state.penSize };
+        }
+    }
+
+onMove(e) {
+        // 1. Get Coordinates
+        const r = this.canvas.getBoundingClientRect();
+        const rawX = e.clientX - r.left;
+        const rawY = e.clientY - r.top;
+        const {x, y} = this.getPos(e); 
+
+        // --- NEW ERASER LOGIC ---
+        if (this.state.isErasing) {
+            this.eraseAt(x, y);
+            
+            // Draw Ghost Circle for Eraser UI
+            this.tempCtx.clearRect(0, 0, this.tempCanvas.width, this.tempCanvas.height);
+            this.tempCtx.beginPath();
+            const radius = Math.max((this.state.penSize || 3) * 4, 20); 
+            this.tempCtx.arc(x, y, radius, 0, Math.PI * 2);
+            this.tempCtx.fillStyle = 'rgba(255, 200, 200, 0.4)';
+            this.tempCtx.strokeStyle = 'red';
+            this.tempCtx.lineWidth = 1;
+            this.tempCtx.fill();
+            this.tempCtx.stroke();
+            return;
+        }
+        // ------------------------
+
+        // 2. Hover Effects (Cursors)
+        if (!this.state.isDrawing && !this.state.dragHandle && !this.state.activeMathTool && !this.state.isSelecting) {
+            const hover = this.getHoverInfo(rawX, rawY); 
+            this.tempCanvas.style.cursor = hover ? hover.cursor : 'default';
+            const prevHover = this.state.hoveredAction;
+            const newHover = hover ? hover.action : null;
+            if (prevHover !== newHover) {
+                this.state.hoveredAction = newHover; 
+                this.draw(); 
+            }
+            return; 
+        }
+
+        // 3. Math Tools & Object Manipulation
+        if ((this.state.activeMathTool && this.state.mathAction !== 'draw') || 
+            (this.state.tool === 'select' && (this.state.isSelecting || this.state.dragHandle))) {
+            
+            const dx = x - this.state.lastX;
+            const dy = y - this.state.lastY;
+
+            // A. Math Tools Interaction
+            if (this.state.activeMathTool) {
+                const t = this.state.activeMathTool;
+                const obj = this.state[t];
+                
+                if (this.state.mathAction === 'move') { 
+                    obj.x += dx; 
+                    obj.y += dy; 
+                }
+                else if (this.state.mathAction === 'rotate' || this.state.mathAction === 'rotate_nodraw') { 
+                    const angle = Math.atan2(y - obj.y, x - obj.x);
+                    let offset = 0;
+                    if (t === 'ruler') offset = Math.atan2(obj.h/2, obj.w + 40);
+                    
+                    obj.rotation = angle - offset;
+                }
+                else if (this.state.mathAction === 'resize') { 
+                    if(obj.w !== undefined) obj.w += dx; 
+                    if(obj.r !== undefined) obj.r += dx; 
+                }
+            }
+
+            // B. Selection Box
+            else if (this.state.isSelecting) {
+                if (this.state.selectionRect) {
+                    this.state.selectionRect.w = x - this.state.selectionRect.x;
+                    this.state.selectionRect.h = y - this.state.selectionRect.y;
+                }
+            }
+
+            // C. Object Dragging (Move/Scale/Rotate Objects)
+            else if (this.state.dragHandle) {
+                const sel = this.state.selectedObjects[0];
+
+                if (this.state.dragHandle === 'move') {
+                    this.state.selectedObjects.forEach(o => this.offsetObject(o, dx, dy));
+                }
+                else if (this.state.dragHandle === 'rotate') {
+                    const b = this.getObjectBounds(sel);
+                    const angle = Math.atan2(y - b.cy, x - b.cx);
+                    sel.rotation = angle + Math.PI/2; 
+                }
+                else if (this.state.dragHandle === 'resize') {
+                    if (sel.type === 'rect' || sel.type === 'image') {
+                        sel.w += dx; sel.h += dy;
+                    } 
+                    else if (sel.type === 'circle' || sel.type === 'poly') {
+                        if (sel.radius !== undefined) sel.radius += dx;
+                        else if (sel.r !== undefined) sel.r += dx;
+                    }
+                    else if (sel.type === 'text') {
+                        sel.fontSize = (sel.fontSize || 20) + (dx * 0.5);
+                        if(sel.fontSize < 5) sel.fontSize = 5;
+                    }
+                    else {
+                        const s = 1 + (dx * 0.01);
+                        sel.scaleX = (sel.scaleX || 1) * s;
+                        sel.scaleY = (sel.scaleY || 1) * s;
+                    }
+                }
+                else if (this.state.dragHandle === 'start') { sel.x1 = x; sel.y1 = y; }
+                else if (this.state.dragHandle === 'end') { sel.x2 = x; sel.y2 = y; }
+            }
+
+            this.state.lastX = x;
+            this.state.lastY = y;
+            this.draw(); 
+            return;
+        }
+
+        // 4. Drawing Logic (Pen, Shapes, AND Compass Drawing)
+        if (this.state.isDrawing) {
+            this.tempCtx.clearRect(0, 0, this.tempCanvas.width, this.tempCanvas.height);
+
+            // Standard Pen / Compass
+            if (this.state.tool === 'pen' || (this.state.activeMathTool === 'compass')) {
+                let drawX = x;
+                let drawY = y;
+
+                // --- COMPASS LOGIC START ---
+                if (this.state.activeMathTool === 'compass') {
+                    const c = this.state.compass;
+                    const angle = Math.atan2(y - c.y, x - c.x);
+                    drawX = c.x + c.r * Math.cos(angle);
+                    drawY = c.y + c.r * Math.sin(angle);
+                    c.rotation = angle; 
+                    this.draw(); 
+                }
+                // --- COMPASS LOGIC END ---
+
+                if(this.state.currentPath) this.state.currentPath.points.push({x: drawX, y: drawY});
+                if(this.state.currentPath) {
+                    this.drawObject(this.state.currentPath, this.tempCtx);
+                }
+            } 
+            // Shape Dragging (Rect/Circle/Line)
+            else if (this.state.tempObject) {
+                if(this.state.tool === 'rect') { 
+                    this.state.tempObject.w = x - this.state.startX; 
+                    this.state.tempObject.h = y - this.state.startY; 
+                }
+                else if(this.state.tool === 'circle') { 
+                    this.state.tempObject.radius = Math.sqrt((x - this.state.startX)**2 + (y - this.state.startY)**2); 
+                }
+                else if(this.state.tool === 'line') { 
+                    this.state.tempObject.x2 = x; 
+                    this.state.tempObject.y2 = y; 
+                }
+
+                this.drawObject(this.state.tempObject, this.tempCtx);
+            }
+            
+            this.state.lastX = x; 
+            this.state.lastY = y;
+        }
+    }
 onUp(e) {
+        // --- NEW ERASER LOGIC ---
+        if (this.state.isErasing) {
+            this.state.isErasing = false;
+            // Clear the ghost circle
+            this.tempCtx.clearRect(0, 0, this.tempCanvas.width, this.tempCanvas.height); 
+            this.saveHistory(); // Save the modifications
+            return;
+        }
+        // ------------------------
+
         // 1. Compass Tool Logic
         if (this.state.activeMathTool === 'compass' && this.state.currentPath) { 
             this.getCurrentObjects().push(this.state.currentPath); 
@@ -2902,12 +3010,10 @@ onUp(e) {
         }
         
         // 4. Final Redraw and Save
-    this.needsBake = true; 
+        this.needsBake = true; 
         this.draw();           
-        this.draw();         
         this.saveLocal();    
         this.saveHistory(); 
-    
     }
    
 
@@ -3473,6 +3579,13 @@ updateTextColor(val) {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            
+            if (this.state.gridType === 'webcam' && this.videoEl) {
+   // Calculate aspect ratio logic here...
+   tempCtx.drawImage(this.videoEl, ox, oy, nw, nh);
+} else {
+   tempCtx.drawImage(this.bgCanvas, 0, 0);
+}
         }
         exportSVG() {
             const w = this.canvas.width;
