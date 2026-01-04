@@ -2022,7 +2022,7 @@ this.textEditor.addEventListener('touchstart', (e) => e.stopPropagation());
     }
 
 updateContextBar() {
-    // 1. Target the sidebar container instead of creating a floating div
+    // 1. Target the sidebar container
     const container = document.getElementById('panel-actions');
     const inspector = document.getElementById('mainInspector');
     
@@ -2040,6 +2040,8 @@ updateContextBar() {
     container.style.display = 'block';
 
     const obj = this.state.selectedObjects[0];
+    const isMulti = this.state.selectedObjects.length > 1;
+    const isGroup = obj.type === 'group' && !isMulti;
 
     // --- SVG ICONS ---
     const icons = {
@@ -2053,13 +2055,24 @@ updateContextBar() {
         trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
         bold: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path></svg>',
         italic: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg>',
-        globe: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>'
+        globe: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>',
+        group: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>',
+        split: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>'
     };
 
     let topRowHTML = '';
 
-    // 4. Build Specific Controls (Text vs Shape)
-    if (obj.type === 'text') {
+    // 4. Build Specific Controls based on selection type
+    if (isMulti) {
+         topRowHTML = `
+            <div class="section-title">Selection (${this.state.selectedObjects.length})</div>
+            <div class="ctx-translate-row">
+                 <input type="color" class="ctx-color" value="${obj.color}" oninput="app.setColor(this.value)">
+                 <span style="font-size:11px; color:#64748b;">Mixed Objects</span>
+            </div>
+        `;
+    }
+    else if (obj.type === 'text') {
         topRowHTML = `
             <div class="section-title">Text Tools</div>
             <div class="ctx-translate-row">
@@ -2097,10 +2110,18 @@ updateContextBar() {
         `;
     }
 
-    // 5. Build Action Grid
+    // 5. Build Action Grid (With Dynamic Group/Split Buttons)
+    let groupBtns = '';
+    if (isMulti) {
+        groupBtns = `<button class="ctx-grid-btn" onclick="app.groupSelected()">${icons.group} Group</button>`;
+    } else if (isGroup) {
+        groupBtns = `<button class="ctx-grid-btn" onclick="app.ungroupSelected()">${icons.split} Split</button>`;
+    }
+
     const actionGridHTML = `
         <div class="section-title">Actions</div>
         <div class="ctx-grid">
+            ${groupBtns}
             <button class="ctx-grid-btn" onclick="app.duplicateSelected()">${icons.clone} Clone</button>
             <button class="ctx-grid-btn" onclick="app.toggleLock()">
                 ${obj.locked ? icons.unlock + ' Unlock' : icons.lock + ' Lock'}
