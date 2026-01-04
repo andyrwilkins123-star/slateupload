@@ -1595,10 +1595,22 @@ class PhysicsController {
 }
 // --- NEW TRUE ERASER LOGIC ---
 eraseAt(mx, my) {
-    const eraserRadius = (this.state.penSize || 10) * 2; // Eraser is wider than pen
+    const eraserRadius = (this.state.penSize || 10) * 2; 
     const currentObjs = this.getCurrentObjects();
     const survivors = [];
     let somethingChanged = false;
+
+    // Helper: checks if a path fragment is big enough to be visible (>5px)
+    const isFragmentValid = (points) => {
+        if (points.length < 2) return false;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        points.forEach(p => {
+            minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+            maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+        });
+        // Valid if width OR height is greater than 5px
+        return (maxX - minX > 5 || maxY - minY > 5);
+    };
 
     currentObjs.forEach(obj => {
         if (obj.locked) {
@@ -1608,7 +1620,6 @@ eraseAt(mx, my) {
 
         // 1. ERASE DRAWINGS (The Laser Cutter)
         if (obj.type === 'path') {
-            // Quick check: Is the eraser even near this object?
             const b = this.getObjectBounds(obj);
             if (mx < b.x - eraserRadius || mx > b.x + b.w + eraserRadius || 
                 my < b.y - eraserRadius || my > b.y + b.h + eraserRadius) {
@@ -1616,7 +1627,6 @@ eraseAt(mx, my) {
                 return;
             }
 
-            // It's close. Now check individual points.
             const newSegments = [];
             let currentPoints = [];
             let touched = false;
@@ -1626,26 +1636,22 @@ eraseAt(mx, my) {
                 const dist = Math.hypot(p.x - mx, p.y - my);
 
                 if (dist > eraserRadius) {
-                    // This point is safe
                     currentPoints.push(p);
                 } else {
-                    // This point is DESTROYED
                     touched = true;
-                    // If we have a valid line segment accumulated, save it
-                    if (currentPoints.length > 1) {
-                        // Create a clone of the original path style
+                    // Fragment ended. Check if it's big enough to keep.
+                    if (currentPoints.length > 1 && isFragmentValid(currentPoints)) {
                         const fragment = JSON.parse(JSON.stringify(obj));
                         fragment.points = currentPoints;
-                        // Important: Erasing creates new paths, so we can't keep the isEraser flag
                         delete fragment.isEraser; 
                         newSegments.push(fragment);
                     }
-                    currentPoints = []; // Start fresh
+                    currentPoints = []; 
                 }
             }
 
-            // Save the final trailing segment
-            if (currentPoints.length > 1) {
+            // Check trailing fragment
+            if (currentPoints.length > 1 && isFragmentValid(currentPoints)) {
                 const fragment = JSON.parse(JSON.stringify(obj));
                 fragment.points = currentPoints;
                 delete fragment.isEraser;
@@ -1654,21 +1660,16 @@ eraseAt(mx, my) {
 
             if (touched) {
                 somethingChanged = true;
-                // Add all the new fragments to the survivors list
                 survivors.push(...newSegments);
             } else {
                 survivors.push(obj);
             }
         } 
         
-        // 2. ERASE SHAPES (The Delete Key)
+        // 2. ERASE SHAPES (Standard Delete)
         else {
-            // For shapes, we use the bounding box or hit test
-            // We require the eraser to be reasonably close to the object center or hit it directly
             if (this.hitTest(mx, my, obj)) {
-                // It's hit! It dies immediately.
                 somethingChanged = true;
-                // Do NOT push to survivors. It is gone.
             } else {
                 survivors.push(obj);
             }
@@ -1677,7 +1678,7 @@ eraseAt(mx, my) {
 
     if (somethingChanged) {
         this.state.slides[this.state.currentSlide] = survivors;
-        this.needsBake = true; // Rerender static layer
+        this.needsBake = true; 
         this.draw();
     }
 }
@@ -2367,7 +2368,7 @@ drawEraserPath(o, ctx = this.ctx) {
                 lines.forEach((l, i) => ctx.fillText(l, o.x, o.y + i*o.fontSize*1.2));
             } else if (o.type === 'group') {
                ctx.translate(o.x, o.y);
-                o.children.forEach(child => this.drawObject(child));
+                o.children.forEach(child => this.drawObject(child, ctx));
                 ctx.translate(-o.x, -o.y);
             }
             ctx.restore();
