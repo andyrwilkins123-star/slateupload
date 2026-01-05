@@ -1639,8 +1639,10 @@ eraseAt(mx, my) {
     const currentObjs = this.getCurrentObjects();
     const startCount = currentObjs.length;
 
-    // Filter out any object that the mouse is currently touching
-    const survivors = currentObjs.filter(obj => !this.hitTest(mx, my, obj));
+    // OLD LINE: const survivors = currentObjs.filter(obj => !this.hitTest(mx, my, obj));
+    
+    // NEW LINE: Keep object if it's NOT hit OR if it IS hit but IS LOCKED
+    const survivors = currentObjs.filter(obj => !this.hitTest(mx, my, obj) || obj.locked);
 
     // If we deleted something, update the state and redraw
     if (survivors.length !== startCount) {
@@ -1669,6 +1671,7 @@ eraseAt(mx, my) {
             // Event Listeners
             this.wrapper.appendChild(this.textEditor);
             this.tempCanvas.addEventListener('mousedown', e => this.onDown(e));
+            window.addEventListener('paste', e => this.handlePaste(e));
             window.addEventListener('mousemove', e => { 
             this.onMove(e); 
             });
@@ -1776,6 +1779,68 @@ this.textEditor.addEventListener('touchstart', (e) => e.stopPropagation());
         reader.readAsDataURL(file);
         e.target.value = ''; // Reset input to allow re-uploading the same file
     }
+        handlePaste(e) {
+    // 1. Check for clipboard data
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    let blob = null;
+
+    // 2. Find the image item in the clipboard
+    for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image") === 0) {
+            blob = items[i].getAsFile();
+            break;
+        }
+    }
+
+    // If no image was found, exit (allows text pasting to work elsewhere)
+    if (!blob) return;
+
+    // Prevent default browser behavior (like opening the image in a new tab)
+    e.preventDefault();
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+            // 3. Resize logic (Same as handleImage)
+            let w = img.width;
+            let h = img.height;
+            const maxSize = 1024;
+
+            if (w > maxSize || h > maxSize) {
+                const ratio = Math.min(maxSize / w, maxSize / h);
+                w *= ratio;
+                h *= ratio;
+            }
+
+            // 4. Create the Image Object
+            const imgObj = {
+                type: 'image',
+                x: (this.canvas.width / 2) - (w / 2), // Center on screen
+                y: (this.canvas.height / 2) - (h / 2),
+                w: w,
+                h: h,
+                src: event.target.result,
+                rotation: 0,
+                scaleX: 1,
+                scaleY: 1
+            };
+
+            // 5. Add to state, select it, and redraw
+            this.getCurrentObjects().push(imgObj);
+            this.setTool('select');
+            this.state.selectedObjects = [imgObj];
+            this.updateSelectionUI();
+
+            this.needsBake = true;
+            this.draw();
+            this.saveLocal();
+            this.saveHistory();
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(blob);
+}
 // --- SMART SIDEBAR LOGIC ---
   updateContextualSidebar() {
         const tool = this.state.tool;
@@ -2096,6 +2161,8 @@ updateContextBar() {
                     <option value="Chinese (Mandarin)">Chinese</option>
                     <option value="Arabic">Arabic</option>
                     <option value="Japanese">Japanese</option>
+                    <option value="Korean">Korean</option>
+                    <option value="Turkish">Turkish</option>
                 </select>
                 <button class="ctx-btn" onclick="app.translateSelectedText()" title="Translate">${icons.globe}</button>
             </div>
