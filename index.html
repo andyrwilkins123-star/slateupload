@@ -1607,7 +1607,7 @@ class PhysicsController {
             // -------------------
             
             this.state = {
-                tool: 'pen', snapToGrid: false, color: '#000000', penSize: 3, textSize: 36,
+                tool: 'select', snapToGrid: false, color: '#000000', penSize: 3, textSize: 36,
                 penType: 'pen', lineType: 'solid', fontFamily: "'Lexend', sans-serif",
                 slides: [[]], currentSlide: 0, gridType: 'square', gridSize: 50,
                 isDrawing: false, startX: 0, startY: 0, lastX: 0, lastY: 0,
@@ -1721,6 +1721,7 @@ this.textEditor.addEventListener('touchstart', (e) => e.stopPropagation());
             setTimeout(() => {
                 this.saveHistory(); 
                 this.resizeCanvas();
+                this.updateSelectionUI();
                 this.draw();
             }, 300);
         }
@@ -1776,63 +1777,67 @@ this.textEditor.addEventListener('touchstart', (e) => e.stopPropagation());
         e.target.value = ''; // Reset input to allow re-uploading the same file
     }
 // --- SMART SIDEBAR LOGIC ---
-    updateContextualSidebar() {
-    const tool = this.state.tool;
-    const sel = this.state.selectedObjects;
-    const inspector = document.getElementById('mainInspector');
-    
-    const pPen = document.getElementById('panel-pen');
-    const pText = document.getElementById('panel-text');
-    const pColor = document.getElementById('panel-color');
-    const penTypeCtrl = document.getElementById('penTypeControl');
-
-    const isDrawingTool = ['pen', 'line', 'rect', 'circle', 'poly'].includes(tool);
-    const isTextTool = (tool === 'text');
-    
-    const hasSelection = (sel.length > 0);
-    const isTextSelection = (hasSelection && sel[0].type === 'text');
-    
-    // Exclude 'image' from shape selection so it doesn't show drawing tools
-    const isShapeSelection = (hasSelection && !isTextSelection && sel[0].type !== 'image');
-
-    // 1. DEFAULT: Hide everything
-    inspector.style.display = 'none';
-    pPen.style.display = 'none';
-    pText.style.display = 'none';
-    pColor.style.display = 'none';
-
-    // 2. SCENARIO A: Drawing Tools or Shape Selection (Show Thickness & Color)
-    if (isDrawingTool || isShapeSelection) {
-        inspector.style.display = 'flex';
-        pPen.style.display = 'block';
-        pColor.style.display = 'block'; // Keep showing color circles for shapes/lines
+  updateContextualSidebar() {
+        const tool = this.state.tool;
+        const sel = this.state.selectedObjects;
+        const inspector = document.getElementById('mainInspector');
         
-        // Sync Slider UI to current state
-        const sizeVal = isShapeSelection ? (sel[0].width || 3) : this.state.penSize;
-        document.getElementById('rangeThickness').value = sizeVal;
+        const pPen = document.getElementById('panel-pen');
+        const pText = document.getElementById('panel-text');
+        const pColor = document.getElementById('panel-color');
+        const penTypeCtrl = document.getElementById('penTypeControl');
 
-        // Only show Pen Type if actually using the Pen tool
-        if(penTypeCtrl) penTypeCtrl.style.display = (tool === 'pen') ? 'block' : 'none';
-    }
-
-    // 3. SCENARIO B: Text Tool or Text Selection (Show Font ONLY)
-    if (isTextTool || isTextSelection) {
-        inspector.style.display = 'flex';
-        pText.style.display = 'block';
+        const isDrawingTool = ['pen', 'line', 'rect', 'circle', 'poly'].includes(tool);
+        const isTextTool = (tool === 'text');
         
-        // --- FIX START: Hide the color circles for text ---
-        pColor.style.display = 'none'; 
-        // --- FIX END ---
-
-        // Sync UI
-        const sizeVal = isTextSelection ? (sel[0].fontSize || 36) : this.state.textSize;
-        document.getElementById('rangeTextSize').value = sizeVal;
+        const hasSelection = (sel.length > 0);
         
-        if(isTextSelection) {
-            document.getElementById('fontSelect').value = sel[0].fontFamily || "'Lexend', sans-serif";
+        // --- FIX: Check if we are currently editing text ---
+        const isEditing = (this.state.editingText !== null);
+
+        const isTextSelection = (hasSelection && sel[0].type === 'text') || isEditing;
+        const isShapeSelection = (hasSelection && !isTextSelection && sel[0].type !== 'image');
+
+        // 1. DEFAULT: Hide everything
+        inspector.style.display = 'none';
+        pPen.style.display = 'none';
+        pText.style.display = 'none';
+        pColor.style.display = 'none';
+
+        // 2. SCENARIO A: Drawing Tools or Shape Selection
+        if ((isDrawingTool && !isEditing) || isShapeSelection) {
+            inspector.style.display = 'flex';
+            pPen.style.display = 'block';
+            pColor.style.display = 'block'; 
+            
+            const sizeVal = isShapeSelection ? (sel[0].width || 3) : this.state.penSize;
+            if(document.getElementById('rangeThickness')) document.getElementById('rangeThickness').value = sizeVal;
+            if(penTypeCtrl) penTypeCtrl.style.display = (tool === 'pen') ? 'block' : 'none';
+        }
+
+        // 3. SCENARIO B: Text Tool / Selection / Editing
+        if (isTextTool || isTextSelection) {
+            inspector.style.display = 'flex';
+            pText.style.display = 'block';
+            pColor.style.display = 'block'; // Show colors for text too!
+
+            // Sync UI
+            let currentSize = this.state.textSize;
+            let currentFont = this.state.fontFamily;
+            
+            if(isTextSelection && sel[0]) {
+                currentSize = sel[0].fontSize || 36;
+                currentFont = sel[0].fontFamily || "'Lexend', sans-serif";
+            } else if (this.state.editingText) {
+                currentSize = this.state.editingText.fontSize;
+                currentFont = this.state.editingText.fontFamily;
+            }
+
+            if(document.getElementById('rangeTextSize')) document.getElementById('rangeTextSize').value = currentSize;
+            if(document.getElementById('fontSelect')) document.getElementById('fontSelect').value = currentFont;
         }
     }
-}
+
         // --- DATA & HISTORY ---
         saveLocal() {
             try { localStorage.setItem('workslate_slides', JSON.stringify(this.state.slides)); } 
@@ -2637,15 +2642,32 @@ toLocal(mx, my, ox, oy, rot) {
         ly: dx * Math.sin(-rot) + dy * Math.cos(-rot)
     };
 }
-onDown(e) {
-    const {x, y} = this.getPos(e);
-    this.state.startX = x; this.state.startY = y; this.state.lastX = x; this.state.lastY = y;
-    this.state.isDrawing = false; 
-    
-    if(this.state.editingText) { 
-        if(e.target !== this.textEditor) this.finalizeTextEntry(); 
-        return; 
-    }
+    onDown(e) {
+        const {x, y} = this.getPos(e);
+        this.state.startX = x; this.state.startY = y; this.state.lastX = x; this.state.lastY = y;
+        this.state.isDrawing = false; 
+
+        // --- TEXT TOOL FIX START ---
+        // If we are editing text, check where the user clicked.
+        if(this.state.editingText) { 
+            // If clicking inside the editor, keep going.
+            if(e.target === this.textEditor) return;
+
+            // If clicking a UI element (Inspector, Dock, Buttons), DO NOT close the text editor.
+            if(e.target.closest('.inspector') || 
+               e.target.closest('.dock-container') || 
+               e.target.closest('.context-bar') ||
+               e.target.closest('.radial-menu')) {
+                return; 
+            }
+
+            // Otherwise (clicking empty canvas), close and save the text.
+            this.finalizeTextEntry(); 
+            return; 
+        }
+        // --- TEXT TOOL FIX END ---
+        
+        // ... (Keep the rest of your existing onDown code below this point) ...
     
     if (this.checkMathToolHit(x, y)) {
         if(this.state.activeMathTool === 'compass' && this.state.mathAction === 'draw') {
@@ -3010,40 +3032,64 @@ onUp(e) {
     }
 
         // --- PROPS ---
-        setPenSize(s) { 
+ setPenSize(s) { 
         this.state.penSize = parseInt(s); 
-        // Update Label
-        const lbl = document.getElementById('lblThickness');
-        if(lbl) lbl.innerText = s;
-
-        // Apply to selection immediately
-        this.state.selectedObjects.forEach(o => { 
-            if(!o.locked) o.width = this.state.penSize; 
-        }); 
-        this.draw(); 
-        this.saveHistory(); 
+        this.draw(); // Just update state for pen
     }
 
     setTextSize(s) { 
-        this.state.textSize = parseInt(s); 
-        // Update Label
-        const lbl = document.getElementById('lblTextSize');
-        if(lbl) lbl.innerText = s;
+        const size = parseInt(s);
+        this.state.textSize = size; 
 
-        // Apply to selection immediately
+        // 1. Apply to active Editor
+        if(this.state.editingText) {
+            this.state.editingText.fontSize = size;
+            this.textEditor.style.fontSize = size + 'px';
+            this.autoResizeTextEditor();
+            this.textEditor.focus(); // Keep focus!
+        }
+        
+        // 2. Apply to Selection
         this.state.selectedObjects.forEach(o => { 
-            if(o.type==='text') o.fontSize = this.state.textSize; 
+            if(o.type==='text') o.fontSize = size; 
         }); 
+        
         this.draw(); 
         this.saveHistory(); 
     }
     
-    // Ensure font family updates immediately too
     setFontFamily(f) { 
         this.state.fontFamily = f; 
+
+        // 1. Apply to active Editor
+        if(this.state.editingText) {
+            this.state.editingText.fontFamily = f;
+            this.textEditor.style.fontFamily = f;
+            this.autoResizeTextEditor();
+            this.textEditor.focus(); // Keep focus!
+        }
+
+        // 2. Apply to Selection
         this.state.selectedObjects.forEach(o => { 
             if(o.type==='text') o.fontFamily = f; 
         }); 
+        
+        this.draw(); 
+        this.saveHistory(); 
+    }
+
+    setColor(c) { 
+        this.state.color = c; 
+
+        // 1. Apply to active Editor
+        if(this.state.editingText) {
+            this.state.editingText.color = c;
+            this.textEditor.style.color = c;
+            this.textEditor.focus(); // Keep focus!
+        }
+
+        // 2. Apply to Selection
+        this.state.selectedObjects.forEach(o => o.color = c); 
         this.draw(); 
         this.saveHistory(); 
     }
@@ -3264,46 +3310,56 @@ async translateSelectedText() {
 }
         // --- TEXT ENTRY ---
 startTextEntry(x, y, existingObj = null) {
-    if (this.state.editingText) this.finalizeTextEntry();
-    
-    // Ensure Editor is in DOM
-    if (this.textEditor.parentNode !== this.wrapper) {
-        this.wrapper.appendChild(this.textEditor);
+        if (this.state.editingText) this.finalizeTextEntry();
+        
+        // Ensure Editor is in DOM
+        if (this.textEditor.parentNode !== this.wrapper) {
+            this.wrapper.appendChild(this.textEditor);
+        }
+
+        // Default object structure
+        let obj = existingObj;
+        if (!obj) {
+            obj = {
+                type: 'text', x: x, y: y, text: "",
+                color: this.state.color,
+                fontSize: this.state.textSize,
+                fontFamily: this.state.fontFamily,
+                fontWeight: 'normal',
+                fontStyle: 'normal'
+            };
+        }
+        
+        this.state.editingText = obj;
+        obj.isBeingEdited = true;
+
+        // 1. Setup Text Area
+        this.textEditor.value = obj.text;
+        this.textEditor.style.color = obj.color;
+        this.textEditor.style.font = `${obj.fontStyle || ''} ${obj.fontWeight || ''} ${obj.fontSize}px ${obj.fontFamily}`;
+        this.textEditor.style.lineHeight = "1.2";
+        this.textEditor.style.display = 'block';
+        this.textEditor.style.left = obj.x + 'px';
+        this.textEditor.style.top = obj.y + 'px';
+
+        // 2. SYNC THE INSPECTOR UI TO THIS TEXT
+        // Set Font Family Dropdown
+        const fontSel = document.getElementById('fontSelect');
+        if(fontSel) fontSel.value = obj.fontFamily || "'Lexend', sans-serif";
+        
+        // Set Size Dropdown
+        const sizeSel = document.getElementById('rangeTextSize');
+        if(sizeSel) sizeSel.value = obj.fontSize || 36;
+        
+        // Force the sidebar to update and show the text panel
+        this.state.selectedObjects = [obj]; // Temporarily select it so the UI knows what to show
+        this.updateSelectionUI();
+        
+        this.autoResizeTextEditor();
+        setTimeout(() => this.textEditor.focus(), 50);
+        
+        this.draw();
     }
-
-    // Default object structure
-    let obj = existingObj;
-    if (!obj) {
-        obj = {
-            type: 'text', x: x, y: y, text: "",
-            color: this.state.color,
-            fontSize: this.state.textSize,
-            fontFamily: this.state.fontFamily,
-            fontWeight: 'normal',
-            fontStyle: 'normal'
-        };
-    }
-    
-    this.state.editingText = obj;
-    obj.isBeingEdited = true;
-
-    // 1. Setup Text Area (Clean, no floating menus)
-    this.textEditor.value = obj.text;
-    this.textEditor.style.color = obj.color;
-    this.textEditor.style.font = `${obj.fontStyle || ''} ${obj.fontWeight || ''} ${obj.fontSize}px ${obj.fontFamily}`;
-    this.textEditor.style.lineHeight = "1.2";
-    this.textEditor.style.display = 'block';
-    this.textEditor.style.left = obj.x + 'px';
-    this.textEditor.style.top = obj.y + 'px';
-
-    this.autoResizeTextEditor();
-    setTimeout(() => this.textEditor.focus(), 50);
-    
-    // Hide any other selection UI while typing
-    this.state.selectedObjects = [];
-    this.updateSelectionUI();
-    this.draw();
-}
 
     // 2. Auto Resize
     autoResizeTextEditor() {
