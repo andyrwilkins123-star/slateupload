@@ -946,6 +946,13 @@ Contact: andyrwilkins123@gmail.com -->
             <path d="M20 3L22.5 6L20 9L17.5 6L20 3Z"></path>
         </svg>
     </div>
+    <div class="icon-btn" id="btn-radial-toggle" onclick="radialMenu.toggle()" title="Toggle Right-Click Menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 8v8"></path>
+            <path d="M8 12h8"></path>
+        </svg>
+    </div>
 
     <div class="dock-divider"></div>
 
@@ -2764,9 +2771,19 @@ onDown(e) {
     }
 
     this.state.isDrawing = true; 
-    if (this.state.tool === 'pen' || this.state.tool === 'eraser') {
-        this.state.currentPath = { type: 'path', points: [{x,y}], color: this.state.color, width: this.state.penSize, isEraser: (this.state.tool === 'eraser'), penType: this.state.penType, rotation: 0 };
-    } else if (this.state.tool === 'text') {
+   // --- FIX: Handle Eraser Correctly ---
+        if (this.state.tool === 'eraser') {
+            this.state.isErasing = true;
+            this.eraseAt(x, y); // Erase immediately on the initial click
+            return;
+        }
+
+        // --- Standard Drawing Tools ---
+        this.state.isDrawing = true; 
+        if (this.state.tool === 'pen') {
+            this.state.currentPath = { type: 'path', points: [{x,y}], color: this.state.color, width: this.state.penSize, isEraser: false, penType: this.state.penType, rotation: 0 };
+        } else if (this.state.tool === 'text') {
+            // ... (rest of the code remains the same)
         const found = this.findObject(x, y);
         if (found && found.type === 'text') {
             this.startTextEntry(found.x, found.y, found);
@@ -3922,11 +3939,11 @@ updateTextColor(val) {
     }
 class RadialMenu {
     constructor() {
-        // 1. SELF-REPAIR: Delete any old broken menus to prevent conflicts
+        // 1. SELF-REPAIR: Delete any old broken menus
         const old = document.getElementById('radialOverlay');
         if (old) old.remove();
 
-        // 2. SELF-REPAIR: Inject the CSS automatically
+        // 2. SELF-REPAIR: Inject CSS automatically
         if (!document.getElementById('radial-styles')) {
             const css = `
                 .radial-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; display: none; }
@@ -3942,11 +3959,11 @@ class RadialMenu {
             document.head.appendChild(style);
         }
 
-        // 3. SELF-REPAIR: Create the HTML elements automatically
+        // 3. Create HTML elements
         this.overlay = document.createElement('div');
         this.overlay.id = 'radialOverlay';
         this.overlay.className = 'radial-overlay';
-        this.overlay.onclick = () => this.hide(); // Direct JS binding (fixes "radialMenu is undefined" error)
+        this.overlay.onclick = () => this.hide(); 
         
         this.menu = document.createElement('div');
         this.menu.id = 'radialMenu';
@@ -3954,7 +3971,7 @@ class RadialMenu {
         this.overlay.appendChild(this.menu);
         document.body.appendChild(this.overlay);
 
-        this.active = false;
+        this.enabled = true; // New Flag
         
         this.items = [
             { id: 'pen', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>', angle: 270, action: () => app.setTool('pen') },
@@ -3970,8 +3987,22 @@ class RadialMenu {
         this.initEvents();
     }
 
+    // Toggle Method
+    toggle() {
+        this.enabled = !this.enabled;
+        const btn = document.getElementById('btn-radial-toggle');
+        if (btn) {
+            btn.style.opacity = this.enabled ? "1" : "0.5";
+            // Optional: Flip icon to show it's off
+            if (!this.enabled) {
+                btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>';
+            } else {
+                btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>';
+            }
+        }
+    }
+
     initButtons() {
-        // Center Close Button
         const centerBtn = document.createElement('div');
         centerBtn.className = 'radial-btn radial-center';
         centerBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
@@ -3993,29 +4024,18 @@ class RadialMenu {
     }
 
     initEvents() {
-        // 1. Right Click
+        // Right Click
         window.addEventListener('contextmenu', (e) => {
-            e.preventDefault(); // This blocks the browser menu. If custom menu fails, you see nothing.
+            if (!this.enabled) return;
+            e.preventDefault(); 
             this.show(e.clientX, e.clientY);
         });
 
-        // 2. Long Press (with Jitter Tolerance)
+        // Touch Long Press
         let touchTimer = null;
         let startX = 0, startY = 0;
-        
-        const canvas = document.getElementById('tempCanvas'); // Attach to drawing surface
+        const canvas = document.getElementById('tempCanvas'); 
         if(!canvas) return;
-
-        canvas.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 1) return;
-            const t = e.touches[0];
-            startX = t.clientX; startY = t.clientY;
-            touchTimer = setTimeout(() => {
-                if (typeof app !== 'undefined') app.cancelCurrentAction();
-                this.show(startX, startY);
-                if (navigator.vibrate) navigator.vibrate(50);
-            }, 500);
-        }, { passive: false });
 
         const cancel = (e) => {
             if (touchTimer) {
@@ -4029,6 +4049,18 @@ class RadialMenu {
                 }
             }
         };
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (!this.enabled) return;
+            if (e.touches.length > 1) return;
+            const t = e.touches[0];
+            startX = t.clientX; startY = t.clientY;
+            touchTimer = setTimeout(() => {
+                if (typeof app !== 'undefined') app.cancelCurrentAction();
+                this.show(startX, startY);
+                if (navigator.vibrate) navigator.vibrate(50);
+            }, 500);
+        }, { passive: false });
 
         canvas.addEventListener('touchmove', cancel, { passive: false });
         canvas.addEventListener('touchend', cancel);
