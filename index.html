@@ -270,21 +270,12 @@ Contact: andyrwilkins123@gmail.com -->
 }
     .ctx-btn:hover { background: rgba(0,0,0,0.05); color: #0f172a; }
     .ctx-sep { width: 1px; height: 16px; background: rgba(0,0,0,0.1); margin: 0 4px; }
-    .ctx-color {
-    width: 28px; height: 28px;
-    border-radius: 50%;
-    border: 2px solid white;
-    box-shadow: 0 0 0 1px #cbd5e1;
-    cursor: pointer;
-}
-        .ctx-translate-row {
-    display: flex; 
-    gap: 6px; 
-    align-items: center; 
-    justify-content: space-between; 
-    margin-bottom: 8px; 
-    padding-bottom: 8px; 
-    border-bottom: 1px solid #f1f5f9;
+    .ctx-color { 
+    width: 24px; height: 24px; 
+    border-radius: 50%; 
+    border: 2px solid white; 
+    box-shadow: 0 0 0 1px #cbd5e1; 
+    cursor: pointer; 
 }
     /* INSPECTOR & WINDOWS */
     
@@ -317,16 +308,30 @@ Contact: andyrwilkins123@gmail.com -->
     }
     .inspector-content::-webkit-scrollbar { display: none; }
 
-    .inspector-box {
+   .inspector-box {
         pointer-events: auto;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(8px);
-        border: 1px solid var(--border);
+        /* Updated: Much more transparent (0.3) for a true glass effect */
+        background: rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(2px); /* Reduced blur so you can see behind better */
+        border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 12px; 
         padding: 6px 10px; 
-        box-shadow: var(--shadow-float);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+        /* NEW: Force buttons and dropdowns inside the inspector to be transparent */
+    .inspector-box select, 
+    .inspector-box input,
+    .inspector-box .btn {
+        background: rgba(255, 255, 255, 0.4) !important;
+        border: 1px solid rgba(0,0,0,0.1) !important;
     }
     
+    /* Optional: Make them slightly more visible on hover */
+    .inspector-box select:hover, 
+    .inspector-box input:hover,
+    .inspector-box .btn:hover {
+        background: rgba(255, 255, 255, 0.6) !important;
+    }
     .section-title {
         font-size: 10px; 
         font-weight: 800; color: #94a3b8;
@@ -612,11 +617,11 @@ Contact: andyrwilkins123@gmail.com -->
 /* Style for the grid of buttons inside the popup */
 .ctx-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* 2 Columns */
-    gap: 8px;
-    margin-top: 0;
-    padding-top: 0;
-    border: none;
+    grid-template-columns: 1fr 1fr; 
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0,0,0,0.1);
 }
 
 /* Action Buttons (Clone, Lock, etc) */
@@ -761,8 +766,6 @@ Contact: andyrwilkins123@gmail.com -->
     <aside class="inspector" id="mainInspector" style="display:none;">
     <div class="inspector-content">
         
-        <section id="panel-actions" class="inspector-box" style="display:none;"></section>
-
         <section id="panel-pen" class="inspector-box" style="display:none;">
             <div class="section-title">Stroke & Line</div>
             
@@ -818,7 +821,11 @@ Contact: andyrwilkins123@gmail.com -->
                 </select>
             </div>
             
-            </section>
+            <div style="display:flex; gap:4px;">
+                <button class="btn" onclick="app.toggleTextBold()" style="flex:1;"><b>B</b></button>
+                <button class="btn" onclick="app.toggleTextItalic()" style="flex:1;"><i>I</i></button>
+            </div>
+        </section>
 
         <section id="panel-color" class="inspector-box" style="display:none;">
             <div class="section-title">Color</div>
@@ -853,7 +860,7 @@ Contact: andyrwilkins123@gmail.com -->
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
     </div>
     <div class="icon-btn" onclick="app.setTool('eraser')" title="Eraser">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M20 20H7L3 16C3 16 3 16 3 16C1.5 14.5 1.5 12 3 10.5L10 3.5C11.5 2 14 2 15.5 3.5L20.5 8.5C22 10 22 12.5 20.5 14L16 18.5"></path>
         <path d="M18 14l-6-6"></path>
     </svg>
@@ -939,13 +946,6 @@ Contact: andyrwilkins123@gmail.com -->
             <path d="M20 3L22.5 6L20 9L17.5 6L20 3Z"></path>
         </svg>
     </div>
-    <div class="icon-btn active" id="btn-radial-toggle" onclick="toggleRadialMenu()" title="Toggle Radial Menu">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"></circle>
-        <path d="M12 8v8"></path>
-        <path d="M8 12h8"></path>
-    </svg>
-</div>
 
     <div class="dock-divider"></div>
 
@@ -989,7 +989,12 @@ Contact: andyrwilkins123@gmail.com -->
 
 
 <textarea id="textEditor"></textarea>
-    
+    <div id="textToolbar" class="text-toolbar" style="display:none;">
+    <button class="tt-btn" onclick="app.toggleTextBold()" title="Bold"><strong>B</strong></button>
+    <button class="tt-btn" onclick="app.toggleTextItalic()" title="Italic"><em>I</em></button>
+    <div class="tt-sep"></div>
+    <input type="color" id="textToolbarColor" oninput="app.updateTextColor(this.value)" title="Text Color">
+</div>
     <div id="slideSorter">
     <div class="add-slide-card" onclick="app.addSlide()">
         <span style="font-size:40px;">+</span>
@@ -1004,13 +1009,13 @@ Contact: andyrwilkins123@gmail.com -->
             <input type="text" id="calcInput" style="width:100%; border:none; background:transparent; text-align:right; font-family:monospace; font-size:16px;" placeholder="Type or click...">
             <div id="calcResult" style="color:#15803d; font-size:24px; margin-top:4px;">0</div>
         </div>
-        <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span id="modeIndicator" style="font-size:12px; font-weight:bold; color:#64748b;">DEG</span>
             <div id="latexPreview" style="font-size:14px; color:#3b82f6;">$$0$$</div>
         </div>
         <div class="calc-grid">
-            <button class="c-btn" onclick="ui.addToCalc('log10(')">log</button>
-            <button class="c-btn" onclick="ui.addToCalc('log(')">ln</button>
-            
+            <button class="c-btn" onclick="ui.setCalcMode('RAD')">RAD</button>
+            <button class="c-btn" onclick="ui.setCalcMode('DEG')">DEG</button>
             <button class="c-btn" onclick="ui.trig('sin')">sin</button>
             <button class="c-btn" onclick="ui.trig('cos')">cos</button>
             <button class="c-btn" onclick="ui.trig('tan')">tan</button>
@@ -1099,18 +1104,14 @@ Contact: andyrwilkins123@gmail.com -->
     </div>
 </div>
 
-<div id="win-yt" class="floating-window" style="width:900px;"> <div class="fw-header">YouTube Player <span class="fw-close" onclick="ui.toggleWindow('win-yt')">&times;</span></div>
+<div id="win-yt" class="floating-window" style="width:400px;">
+    <div class="fw-header">YouTube Player <span class="fw-close" onclick="ui.toggleWindow('win-yt')">&times;</span></div>
     <div class="fw-content">
         <div style="display:flex; gap:5px; margin-bottom:10px;">
             <input type="text" id="ytUrl" placeholder="Paste YouTube URL here..." style="flex:1; padding:4px;">
-            
-            <button class="btn" onclick="ui.pasteYoutubeLink()" title="Paste Link">
-                Paste Link
-            </button>
-            
             <button class="btn" onclick="ui.loadYoutube()">Load</button>
         </div>
-        <iframe id="ytFrame" style="width:100%; height:450px; border:none; background:black;"></iframe>
+        <iframe id="ytFrame" style="width:100%; height:200px; border:none; background:black;"></iframe>
     </div>
 </div>
 <div class="math-fab-group">
@@ -1215,21 +1216,7 @@ Contact: andyrwilkins123@gmail.com -->
         el.classList.add('collapsed');
     }
 }
-// Add this inside the UIController class
-async pasteYoutubeLink() {
-    try {
-        const text = await navigator.clipboard.readText();
-        const input = document.getElementById('ytUrl');
-        input.value = text;
-        
-        // Optional: Auto-load if it looks like a link
-        if(text.includes('youtube.com') || text.includes('youtu.be')) {
-            this.loadYoutube();
-        }
-    } catch (err) {
-        alert("Could not paste from clipboard. Please use Ctrl+V / Cmd+V.");
-    }
-}
+
         toggleWindow(id) { 
             const el = document.getElementById(id); 
             if (el.style.display === 'flex') {
@@ -1303,63 +1290,41 @@ async pasteYoutubeLink() {
             preview.innerHTML = `$$${displayStr || '0'}$$`;
             if (window.MathJax) MathJax.typesetPromise([preview]);
         }
+        setCalcMode(m) { this.calcMode = m; document.getElementById('modeIndicator').textContent = m; }
         addToCalc(val) { document.getElementById('calcInput').value += val; this.updateLatex(); }
         calcDel() { const inp = document.getElementById('calcInput'); inp.value = inp.value.slice(0, -1); this.updateLatex(); }
         calcAC() { document.getElementById('calcInput').value = ""; document.getElementById('calcResult').innerText = "0"; this.updateLatex(); }
         trig(func) { this.addToCalc(func + '('); }
         useAns() { this.addToCalc(this.lastAns); }
-calculate() {
-    let expr = document.getElementById('calcInput').value;
-    if (!expr) return;
-    try {
-        let processedExpr = expr
-            .replace(/Math\.PI/g, 'pi')
-            .replace(/Math\.E/g, 'e')
-            .replace(/Math\./g, '')
-            .replace(/\*\*/g, '^');
-
-        // Auto-close parentheses
-        const openP = (processedExpr.match(/\(/g) || []).length;
-        const closeP = (processedExpr.match(/\)/g) || []).length;
-        if (openP > closeP) processedExpr += ')'.repeat(openP - closeP);
-
-        // Helper: "Snap" tiny floating-point errors (like 1.2e-15) to 0
-        const snap = (val) => {
-            if (Math.abs(val) < 1e-10) return 0;
-            return val;
-        };
-
-        // Helpers for conversions
-        const toRad = (deg) => deg * (Math.PI / 180);
-        const toDeg = (rad) => rad * (180 / Math.PI);
-
-        // Custom scope for DEGREES MODE
-        const scope = {
-            // Forward Trig: Input is Degrees -> Convert to Rads -> Snap result
-            sin: (x) => snap(math.sin(toRad(x))),
-            cos: (x) => snap(math.cos(toRad(x))),
-            tan: (x) => snap(math.tan(toRad(x))),
-            
-            // Inverse Trig: Output is Rads -> Convert to Degrees
-            asin: (x) => toDeg(math.asin(x)),
-            acos: (x) => toDeg(math.acos(x)),
-            atan: (x) => toDeg(math.atan(x)),
-            
-            log: (x) => math.log(x),
-            log10: (x) => math.log10(x)
-        };
-
-        const result = math.evaluate(processedExpr, scope);
-        this.lastAns = result;
-        
-        // Format: precision 10 cleans up messy decimals (e.g. 1.999999 -> 2)
-        document.getElementById('calcResult').innerText = math.format(result, { precision: 10 });
-        this.updateLatex();
-    } catch (e) {
-        document.getElementById('calcResult').innerText = "Error";
+        calculate() {
+            let expr = document.getElementById('calcInput').value;
+            if (!expr) return;
+            try {
+                let processedExpr = expr.replace(/Math\.PI/g, 'pi').replace(/Math\.E/g, 'e').replace(/Math\./g, '').replace(/\*\*/g, '^');
+                // Auto-close parentheses
+                const openP = (processedExpr.match(/\(/g) || []).length;
+                const closeP = (processedExpr.match(/\)/g) || []).length;
+                if (openP > closeP) processedExpr += ')'.repeat(openP - closeP);
+                
+                let scope = {};
+                if (this.calcMode === 'DEG') {
+                    scope = {
+                        sin: (x) => math.sin(math.unit(x, 'deg')),
+                        cos: (x) => math.cos(math.unit(x, 'deg')),
+                        tan: (x) => math.tan(math.unit(x, 'deg')),
+                        asin: (x) => math.number(math.asin(x), 'deg'),
+                        acos: (x) => math.number(math.acos(x), 'deg'),
+                        atan: (x) => math.number(math.atan(x), 'deg')
+                    };
+                }
+                const result = math.evaluate(processedExpr, scope);
+                this.lastAns = result;
+                document.getElementById('calcResult').innerText = math.format(result, {precision: 10});
+                this.updateLatex();
+            } catch (e) { document.getElementById('calcResult').innerText = "Error"; }
+        }
     }
-}
-}
+
 
 // --- PHYSICS ENGINE INTEGRATION (SLIPPERY SLOPES) ---
 class PhysicsController {
@@ -1614,7 +1579,7 @@ class PhysicsController {
             // -------------------
             
             this.state = {
-                tool: 'select', snapToGrid: false, color: '#000000', penSize: 3, textSize: 36,
+                tool: 'pen', snapToGrid: false, color: '#000000', penSize: 3, textSize: 36,
                 penType: 'pen', lineType: 'solid', fontFamily: "'Lexend', sans-serif",
                 slides: [[]], currentSlide: 0, gridType: 'square', gridSize: 50,
                 isDrawing: false, startX: 0, startY: 0, lastX: 0, lastY: 0,
@@ -1642,17 +1607,90 @@ class PhysicsController {
         }
     }
 }
+// --- NEW TRUE ERASER LOGIC ---
 eraseAt(mx, my) {
+    const eraserRadius = (this.state.penSize || 10) * 2; 
     const currentObjs = this.getCurrentObjects();
-    const startCount = currentObjs.length;
+    const survivors = [];
+    let somethingChanged = false;
 
-    // OLD LINE: const survivors = currentObjs.filter(obj => !this.hitTest(mx, my, obj));
-    
-    // NEW LINE: Keep object if it's NOT hit OR if it IS hit but IS LOCKED
-    const survivors = currentObjs.filter(obj => !this.hitTest(mx, my, obj) || obj.locked);
+    // Helper: checks if a path fragment is big enough to be visible (>5px)
+    const isFragmentValid = (points) => {
+        if (points.length < 2) return false;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        points.forEach(p => {
+            minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+            maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+        });
+        // Valid if width OR height is greater than 5px
+        return (maxX - minX > 5 || maxY - minY > 5);
+    };
 
-    // If we deleted something, update the state and redraw
-    if (survivors.length !== startCount) {
+    currentObjs.forEach(obj => {
+        if (obj.locked) {
+            survivors.push(obj);
+            return;
+        }
+
+        // 1. ERASE DRAWINGS (The Laser Cutter)
+        if (obj.type === 'path') {
+            const b = this.getObjectBounds(obj);
+            if (mx < b.x - eraserRadius || mx > b.x + b.w + eraserRadius || 
+                my < b.y - eraserRadius || my > b.y + b.h + eraserRadius) {
+                survivors.push(obj);
+                return;
+            }
+
+            const newSegments = [];
+            let currentPoints = [];
+            let touched = false;
+
+            for (let i = 0; i < obj.points.length; i++) {
+                const p = obj.points[i];
+                const dist = Math.hypot(p.x - mx, p.y - my);
+
+                if (dist > eraserRadius) {
+                    currentPoints.push(p);
+                } else {
+                    touched = true;
+                    // Fragment ended. Check if it's big enough to keep.
+                    if (currentPoints.length > 1 && isFragmentValid(currentPoints)) {
+                        const fragment = JSON.parse(JSON.stringify(obj));
+                        fragment.points = currentPoints;
+                        delete fragment.isEraser; 
+                        newSegments.push(fragment);
+                    }
+                    currentPoints = []; 
+                }
+            }
+
+            // Check trailing fragment
+            if (currentPoints.length > 1 && isFragmentValid(currentPoints)) {
+                const fragment = JSON.parse(JSON.stringify(obj));
+                fragment.points = currentPoints;
+                delete fragment.isEraser;
+                newSegments.push(fragment);
+            }
+
+            if (touched) {
+                somethingChanged = true;
+                survivors.push(...newSegments);
+            } else {
+                survivors.push(obj);
+            }
+        } 
+        
+        // 2. ERASE SHAPES (Standard Delete)
+        else {
+            if (this.hitTest(mx, my, obj)) {
+                somethingChanged = true;
+            } else {
+                survivors.push(obj);
+            }
+        }
+    });
+
+    if (somethingChanged) {
         this.state.slides[this.state.currentSlide] = survivors;
         this.needsBake = true; 
         this.draw();
@@ -1678,7 +1716,6 @@ eraseAt(mx, my) {
             // Event Listeners
             this.wrapper.appendChild(this.textEditor);
             this.tempCanvas.addEventListener('mousedown', e => this.onDown(e));
-            window.addEventListener('paste', e => this.handlePaste(e));
             window.addEventListener('mousemove', e => { 
             this.onMove(e); 
             });
@@ -1731,7 +1768,6 @@ this.textEditor.addEventListener('touchstart', (e) => e.stopPropagation());
             setTimeout(() => {
                 this.saveHistory(); 
                 this.resizeCanvas();
-                this.updateSelectionUI();
                 this.draw();
             }, 300);
         }
@@ -1786,70 +1822,8 @@ this.textEditor.addEventListener('touchstart', (e) => e.stopPropagation());
         reader.readAsDataURL(file);
         e.target.value = ''; // Reset input to allow re-uploading the same file
     }
-        handlePaste(e) {
-    // 1. Check for clipboard data
-    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-    let blob = null;
-
-    // 2. Find the image item in the clipboard
-    for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf("image") === 0) {
-            blob = items[i].getAsFile();
-            break;
-        }
-    }
-
-    // If no image was found, exit (allows text pasting to work elsewhere)
-    if (!blob) return;
-
-    // Prevent default browser behavior (like opening the image in a new tab)
-    e.preventDefault();
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-            // 3. Resize logic (Same as handleImage)
-            let w = img.width;
-            let h = img.height;
-            const maxSize = 1024;
-
-            if (w > maxSize || h > maxSize) {
-                const ratio = Math.min(maxSize / w, maxSize / h);
-                w *= ratio;
-                h *= ratio;
-            }
-
-            // 4. Create the Image Object
-            const imgObj = {
-                type: 'image',
-                x: (this.canvas.width / 2) - (w / 2), // Center on screen
-                y: (this.canvas.height / 2) - (h / 2),
-                w: w,
-                h: h,
-                src: event.target.result,
-                rotation: 0,
-                scaleX: 1,
-                scaleY: 1
-            };
-
-            // 5. Add to state, select it, and redraw
-            this.getCurrentObjects().push(imgObj);
-            this.setTool('select');
-            this.state.selectedObjects = [imgObj];
-            this.updateSelectionUI();
-
-            this.needsBake = true;
-            this.draw();
-            this.saveLocal();
-            this.saveHistory();
-        };
-        img.src = event.target.result;
-    };
-    reader.readAsDataURL(blob);
-}
 // --- SMART SIDEBAR LOGIC ---
-  updateContextualSidebar() {
+    updateContextualSidebar() {
         const tool = this.state.tool;
         const sel = this.state.selectedObjects;
         const inspector = document.getElementById('mainInspector');
@@ -1859,15 +1833,17 @@ this.textEditor.addEventListener('touchstart', (e) => e.stopPropagation());
         const pColor = document.getElementById('panel-color');
         const penTypeCtrl = document.getElementById('penTypeControl');
 
+        // --- FIX 1: Remove 'eraser' from this list ---
+        // Old: ['pen', 'line', 'rect', 'circle', 'poly', 'eraser']
         const isDrawingTool = ['pen', 'line', 'rect', 'circle', 'poly'].includes(tool);
+        
         const isTextTool = (tool === 'text');
         
         const hasSelection = (sel.length > 0);
-        
-        // --- FIX: Check if we are currently editing text ---
-        const isEditing = (this.state.editingText !== null);
+        const isTextSelection = (hasSelection && sel[0].type === 'text');
 
-        const isTextSelection = (hasSelection && sel[0].type === 'text') || isEditing;
+        // --- FIX 2: Exclude 'image' from shape selection ---
+        // We add: && sel[0].type !== 'image'
         const isShapeSelection = (hasSelection && !isTextSelection && sel[0].type !== 'image');
 
         // 1. DEFAULT: Hide everything
@@ -1876,40 +1852,37 @@ this.textEditor.addEventListener('touchstart', (e) => e.stopPropagation());
         pText.style.display = 'none';
         pColor.style.display = 'none';
 
-        // 2. SCENARIO A: Drawing Tools or Shape Selection
-        if ((isDrawingTool && !isEditing) || isShapeSelection) {
+        // 2. SCENARIO A: Drawing Tools or Shape Selection (Show Thickness & Color)
+        if (isDrawingTool || isShapeSelection) {
             inspector.style.display = 'flex';
             pPen.style.display = 'block';
-            pColor.style.display = 'block'; 
+            pColor.style.display = 'block';
             
+            // Sync Slider UI to current state
             const sizeVal = isShapeSelection ? (sel[0].width || 3) : this.state.penSize;
-            if(document.getElementById('rangeThickness')) document.getElementById('rangeThickness').value = sizeVal;
+            document.getElementById('rangeThickness').value = sizeVal;
+            // document.getElementById('lblThickness').innerText = sizeVal; // (Optional: if you have a label)
+
+            // Only show Pen Type (Brush/Highlighter) if actually using the Pen tool
             if(penTypeCtrl) penTypeCtrl.style.display = (tool === 'pen') ? 'block' : 'none';
         }
 
-        // 3. SCENARIO B: Text Tool / Selection / Editing
+        // 3. SCENARIO B: Text Tool or Text Selection (Show Font & Color)
         if (isTextTool || isTextSelection) {
             inspector.style.display = 'flex';
             pText.style.display = 'block';
-            pColor.style.display = 'block'; // Show colors for text too!
+            pColor.style.display = 'block';
 
             // Sync UI
-            let currentSize = this.state.textSize;
-            let currentFont = this.state.fontFamily;
+            const sizeVal = isTextSelection ? (sel[0].fontSize || 36) : this.state.textSize;
+            document.getElementById('rangeTextSize').value = sizeVal;
+            // document.getElementById('lblTextSize').innerText = sizeVal;
             
-            if(isTextSelection && sel[0]) {
-                currentSize = sel[0].fontSize || 36;
-                currentFont = sel[0].fontFamily || "'Lexend', sans-serif";
-            } else if (this.state.editingText) {
-                currentSize = this.state.editingText.fontSize;
-                currentFont = this.state.editingText.fontFamily;
+            if(isTextSelection) {
+                document.getElementById('fontSelect').value = sel[0].fontFamily || "'Lexend', sans-serif";
             }
-
-            if(document.getElementById('rangeTextSize')) document.getElementById('rangeTextSize').value = currentSize;
-            if(document.getElementById('fontSelect')) document.getElementById('fontSelect').value = currentFont;
         }
     }
-
         // --- DATA & HISTORY ---
         saveLocal() {
             try { localStorage.setItem('workslate_slides', JSON.stringify(this.state.slides)); } 
@@ -2095,127 +2068,145 @@ this.textEditor.addEventListener('touchstart', (e) => e.stopPropagation());
 
         // 3. TRIGGER THE SMART SIDEBAR
         this.updateContextualSidebar();
-     this.needsBake = true;
+     this.needsBake = true
     }
 
-updateContextBar() {
-    // 1. Target the sidebar container
-    const container = document.getElementById('panel-actions');
-    const inspector = document.getElementById('mainInspector');
-    
-    // 2. Hide if nothing selected
-    if (this.state.selectedObjects.length === 0) {
-        if (container) {
-            container.innerHTML = ''; 
-            container.style.display = 'none';
+  updateContextBar() {
+        let bar = document.getElementById('floatingContextBar');
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.id = 'floatingContextBar';
+            bar.className = 'context-bar';
+            bar.style.zIndex = "9999"; 
+            document.body.appendChild(bar);
         }
-        return;
-    }
 
-    // 3. Ensure Sidebar and Panel are visible
-    inspector.style.display = 'flex';
-    container.style.display = 'block';
+        if (this.state.selectedObjects.length === 0) {
+            bar.style.display = 'none';
+            return;
+        }
 
-    const obj = this.state.selectedObjects[0];
-    const isMulti = this.state.selectedObjects.length > 1;
-    const isGroup = obj.type === 'group' && !isMulti;
+        const obj = this.state.selectedObjects[0];
+        const b = this.getObjectBounds(obj);
 
-    // --- SVG ICONS ---
-    const icons = {
-        clone: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>',
-        lock: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>',
-        unlock: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>',
-        flipH: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a2 2 0 0 0-2-2h-3"></path><circle cx="16" cy="7" r="4"></circle></svg>',
-        flipV: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>', 
-        front: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 11 12 6 7 11"></polyline><polyline points="17 18 12 13 7 18"></polyline></svg>',
-        back: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 13 12 18 17 13"></polyline><polyline points="7 6 12 11 17 6"></polyline></svg>',
-        trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
-        bold: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path></svg>',
-        italic: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg>',
-        globe: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>',
-        group: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>',
-        split: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>'
-    };
+        // --- SVG ICON DEFINITIONS ---
+        const icons = {
+            clone: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>',
+            lock: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>',
+            unlock: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>',
+            flipH: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a2 2 0 0 0-2-2h-3"></path><circle cx="16" cy="7" r="4"></circle></svg>',
+            flipV: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>', 
+            group: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>',
+            split: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 8l8 8"></path><path d="M16 8l-8 8"></path></svg>',
+            front: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 11 12 6 7 11"></polyline><polyline points="17 18 12 13 7 18"></polyline></svg>',
+            back: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="7 13 12 18 17 13"></polyline><polyline points="7 6 12 11 17 6"></polyline></svg>',
+            trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
+            bold: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path></svg>',
+            italic: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg>',
+            globe: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>'
+        };
 
-    let topRowHTML = '';
+        const rowStyle = 'display:flex; gap:8px; align-items:center; justify-content:center; padding-bottom:8px;';
+        let topRowHTML = '';
 
-    // 4. Build Specific Controls based on selection type
-    if (isMulti) {
-         topRowHTML = `
-            <div class="section-title">Selection (${this.state.selectedObjects.length})</div>
-            <div class="ctx-translate-row">
-                 <input type="color" class="ctx-color" value="${obj.color}" oninput="app.setColor(this.value)">
-                 <span style="font-size:11px; color:#64748b;">Mixed Objects</span>
-            </div>
-        `;
-    }
-    else if (obj.type === 'text') {
-        topRowHTML = `
-            <div class="section-title">Text Tools</div>
-            <div class="ctx-translate-row">
-                <button class="ctx-btn ${obj.fontWeight === 'bold' ? 'active' : ''}" onclick="app.toggleTextBold()" title="Bold">${icons.bold}</button>
-                <button class="ctx-btn ${obj.fontStyle === 'italic' ? 'active' : ''}" onclick="app.toggleTextItalic()" title="Italic">${icons.italic}</button>
-                <input type="color" class="ctx-color" value="${obj.color}" oninput="app.setColor(this.value)">
-            </div>
-            
-            <div class="section-title" style="margin-top:4px;">Translation</div>
-            <div class="ctx-translate-row">
-                <select id="ctxLangSelect" class="ctx-select" style="flex:1;">
-                    <option value="French">French</option>
-                    <option value="Spanish">Spanish</option>
-                    <option value="German">German</option>
-                    <option value="Italian">Italian</option>
-                    <option value="Chinese (Mandarin)">Chinese</option>
-                    <option value="Arabic">Arabic</option>
-                    <option value="Japanese">Japanese</option>
-                    <option value="Korean">Korean</option>
-                    <option value="Turkish">Turkish</option>
-                </select>
-                <button class="ctx-btn" onclick="app.translateSelectedText()" title="Translate">${icons.globe}</button>
-            </div>
-        `;
-    } else {
-        topRowHTML = `
-            <div class="section-title">Shape Properties</div>
-            <div class="ctx-translate-row">
-                <label style="font-size:11px; color:#64748b;">Fill / Color</label>
-                <div style="display:flex; gap:5px;">
+        if (obj.type === 'text') {
+            topRowHTML = `
+                <div style="${rowStyle}">
+                    <button class="ctx-btn" onclick="app.toggleTextBold()" title="Bold">${icons.bold}</button>
+                    <button class="ctx-btn" onclick="app.toggleTextItalic()" title="Italic">${icons.italic}</button>
+                    <input type="color" class="ctx-color" value="${obj.color}" oninput="app.setColor(this.value)">
+                    <div class="ctx-sep"></div>
+                    <select id="ctxLangSelect" class="ctx-select" style="max-width: 80px;">
+                        <option value="French">French</option>
+                        <option value="Spanish">Spanish</option>
+                        <option value="German">German</option>
+                        <option value="Italian">Italian</option>
+                        <option value="Chinese (Mandarin)">Chinese</option>
+                        <option value="Arabic">Arabic</option>
+                        <option value="Japanese">Japanese</option>
+                        <option value="Hindi">Hindi</option>
+                        <option value="Turkish">Turkish</option>
+                        <option value="Korean">Korean</option>
+                        <option value="Portuguese">Portuguese</option>
+                        <option value="Russian">Russian</option>
+                        <option value="Dutch">Dutch</option>
+                        <option value="Polish">Polish</option>
+                        <option value="Vietnamese">Vietnamese</option>
+                        <option value="Thai">Thai</option>
+                    </select>
+                    <button class="ctx-btn" onclick="app.translateSelectedText()" title="Translate">${icons.globe}</button>
+                </div>
+            `;
+        } else {
+            topRowHTML = `
+                <div style="${rowStyle}">
                     <input type="color" class="ctx-color" value="${obj.color}" oninput="app.setColor(this.value)">
                     <button class="ctx-btn" onclick="app.toggleFill()" title="Toggle Fill">
                         ${obj.filled ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>'}
                     </button>
                 </div>
+            `;
+        }
+
+        const actionGridHTML = `
+            <div class="ctx-grid">
+                <button class="ctx-grid-btn" onclick="app.duplicateSelected()">${icons.clone} Clone</button>
+                <button class="ctx-grid-btn" onclick="app.toggleLock()">
+                    ${obj.locked ? icons.unlock + ' Unlock' : icons.lock + ' Lock'}
+                </button>
+                
+                <button class="ctx-grid-btn" onclick="app.flipSelected('h')">${icons.flipH} Flip H</button>
+                <button class="ctx-grid-btn" onclick="app.flipSelected('v')">${icons.flipV} Flip V</button>
+                
+                <button class="ctx-grid-btn" onclick="app.groupSelected()">${icons.group} Group</button>
+                <button class="ctx-grid-btn" onclick="app.ungroupSelected()">${icons.split} Split</button>
+                
+                <button class="ctx-grid-btn" onclick="app.bringToFront()">${icons.front} Front</button>
+                <button class="ctx-grid-btn" onclick="app.sendToBack()">${icons.back} Back</button>
+                
+                <button class="ctx-grid-btn delete-btn" onclick="app.deleteSelected()">${icons.trash} Delete</button>
             </div>
         `;
-    }
 
-    // 5. Build Action Grid (With Dynamic Group/Split Buttons)
-    let groupBtns = '';
-    if (isMulti) {
-        groupBtns = `<button class="ctx-grid-btn" onclick="app.groupSelected()">${icons.group} Group</button>`;
-    } else if (isGroup) {
-        groupBtns = `<button class="ctx-grid-btn" onclick="app.ungroupSelected()">${icons.split} Split</button>`;
-    }
+        bar.innerHTML = topRowHTML + actionGridHTML;
+        bar.style.display = 'flex';
+        
+        const barWidth = 220; 
+// Get the actual height of the bar after it's rendered to be precise
+const barHeight = bar.offsetHeight || 260; 
 
-    const actionGridHTML = `
-        <div class="section-title">Actions</div>
-        <div class="ctx-grid">
-            ${groupBtns}
-            <button class="ctx-grid-btn" onclick="app.duplicateSelected()">${icons.clone} Clone</button>
-            <button class="ctx-grid-btn" onclick="app.toggleLock()">
-                ${obj.locked ? icons.unlock + ' Unlock' : icons.lock + ' Lock'}
-            </button>
-            <button class="ctx-grid-btn" onclick="app.flipSelected('h')">${icons.flipH} Flip H</button>
-            <button class="ctx-grid-btn" onclick="app.flipSelected('v')">${icons.flipV} Flip V</button>
-            <button class="ctx-grid-btn" onclick="app.bringToFront()">${icons.front} Front</button>
-            <button class="ctx-grid-btn" onclick="app.sendToBack()">${icons.back} Back</button>
-            <button class="ctx-grid-btn delete-btn" onclick="app.deleteSelected()">${icons.trash} Delete</button>
-        </div>
-    `;
+let left = b.cx - (barWidth / 2);
+let top = b.y - barHeight - 10; // Try to position above the element
 
-    // 6. Inject into Sidebar
-    container.innerHTML = topRowHTML + actionGridHTML;
+// --- BOUNDS CHECK LOGIC ---
+
+// 1. Bottom Edge: If it goes off the bottom, flip it to show ABOVE the element
+if (top + barHeight > window.innerHeight) {
+    top = b.y - barHeight - 10;
 }
+
+// 2. Top Edge: If it still goes off the top, push it down to the very top (10px padding)
+if (top < 10) {
+    // If it's too high, try showing it BELOW the element instead
+    top = b.y + b.h + 20;
+    
+    // If it STILL goes off the bottom, just pin it to the top of the screen
+    if (top + barHeight > window.innerHeight) {
+        top = 10;
+    }
+}
+
+// 3. Left Edge: Keep 10px from the left side
+if (left < 10) left = 10;
+
+// 4. Right Edge: Keep 10px from the right side
+if (left + barWidth > window.innerWidth) {
+    left = window.innerWidth - barWidth - 10;
+}
+        
+        bar.style.left = left + 'px';
+        bar.style.top = top + 'px';
+    }
         bakeStatic() {
     // Clear the cache
     this.cacheCtx.clearRect(0, 0, this.cacheCanvas.width, this.cacheCanvas.height);
@@ -2716,32 +2707,15 @@ toLocal(mx, my, ox, oy, rot) {
         ly: dx * Math.sin(-rot) + dy * Math.cos(-rot)
     };
 }
-    onDown(e) {
-        const {x, y} = this.getPos(e);
-        this.state.startX = x; this.state.startY = y; this.state.lastX = x; this.state.lastY = y;
-        this.state.isDrawing = false; 
-
-        // --- TEXT TOOL FIX START ---
-        // If we are editing text, check where the user clicked.
-        if(this.state.editingText) { 
-            // If clicking inside the editor, keep going.
-            if(e.target === this.textEditor) return;
-
-            // If clicking a UI element (Inspector, Dock, Buttons), DO NOT close the text editor.
-            if(e.target.closest('.inspector') || 
-               e.target.closest('.dock-container') || 
-               e.target.closest('.context-bar') ||
-               e.target.closest('.radial-menu')) {
-                return; 
-            }
-
-            // Otherwise (clicking empty canvas), close and save the text.
-            this.finalizeTextEntry(); 
-            return; 
-        }
-        // --- TEXT TOOL FIX END ---
-        
-        // ... (Keep the rest of your existing onDown code below this point) ...
+onDown(e) {
+    const {x, y} = this.getPos(e);
+    this.state.startX = x; this.state.startY = y; this.state.lastX = x; this.state.lastY = y;
+    this.state.isDrawing = false; 
+    
+    if(this.state.editingText) { 
+        if(e.target !== this.textEditor) this.finalizeTextEntry(); 
+        return; 
+    }
     
     if (this.checkMathToolHit(x, y)) {
         if(this.state.activeMathTool === 'compass' && this.state.mathAction === 'draw') {
@@ -2790,25 +2764,8 @@ toLocal(mx, my, ox, oy, rot) {
     }
 
     this.state.isDrawing = true; 
-
-    if (this.state.tool === 'eraser') {
-        this.state.isErasing = true;
-        this.eraseAt(x, y); // Erase immediately on click
-        return;
-    }
-
-    this.state.isDrawing = true; 
-    
-    if (this.state.tool === 'pen') {
-        this.state.currentPath = { 
-            type: 'path', 
-            points: [{x,y}], 
-            color: this.state.color, 
-            width: this.state.penSize, 
-            penType: this.state.penType, 
-            rotation: 0 
-        };
-   
+    if (this.state.tool === 'pen' || this.state.tool === 'eraser') {
+        this.state.currentPath = { type: 'path', points: [{x,y}], color: this.state.color, width: this.state.penSize, isEraser: (this.state.tool === 'eraser'), penType: this.state.penType, rotation: 0 };
     } else if (this.state.tool === 'text') {
         const found = this.findObject(x, y);
         if (found && found.type === 'text') {
@@ -2838,10 +2795,22 @@ onMove(e) {
 
         // --- NEW ERASER LOGIC ---
         if (this.state.isErasing) {
-        this.eraseAt(x, y);
-        return;
+            this.eraseAt(x, y);
+            
+            // Draw Ghost Circle for Eraser UI
+            this.tempCtx.clearRect(0, 0, this.tempCanvas.width, this.tempCanvas.height);
+            this.tempCtx.beginPath();
+            const radius = Math.max((this.state.penSize || 3) * 4, 20); 
+            this.tempCtx.arc(x, y, radius, 0, Math.PI * 2);
+            this.tempCtx.fillStyle = 'rgba(255, 200, 200, 0.4)';
+            this.tempCtx.strokeStyle = 'red';
+            this.tempCtx.lineWidth = 1;
+            this.tempCtx.fill();
+            this.tempCtx.stroke();
+            return;
+        }
         // ------------------------
-}
+
         // 2. Hover Effects (Cursors)
         if (!this.state.isDrawing && !this.state.dragHandle && !this.state.activeMathTool && !this.state.isSelecting) {
             const hover = this.getHoverInfo(rawX, rawY); 
@@ -3028,7 +2997,16 @@ onUp(e) {
         
         const obj = this.state.tempObject || this.state.currentPath;
         
-        if (obj) { 
+       if (obj) { 
+            // --- FIX 1 START: Handle Dots (Single Clicks) ---
+            // If it's a single point, duplicate it twice so the path has 3 points.
+            // This satisfies the "length > 2" check in drawObject() and renders a dot.
+            if (obj.type === 'path' && obj.points.length === 1) {
+                obj.points.push({...obj.points[0]});
+                obj.points.push({...obj.points[0]});
+            }
+            // --- FIX 1 END ---
+
             // --- FILTER: Check if the object is too small (accidental click) ---
             let isValid = true;
             
@@ -3039,6 +3017,7 @@ onUp(e) {
             // Check Line
             else if (obj.type === 'line' && Math.hypot(obj.x2 - obj.x1, obj.y2 - obj.y1) < 5) isValid = false;
             // Check Path (Pen)
+            // Note: Since we padded the dots above, valid dots now have length 3, so they pass this check.
             else if (obj.type === 'path' && obj.points.length < 2) isValid = false;
 
             // Only add if it's a real, visible object
@@ -3106,64 +3085,40 @@ onUp(e) {
     }
 
         // --- PROPS ---
- setPenSize(s) { 
+        setPenSize(s) { 
         this.state.penSize = parseInt(s); 
-        this.draw(); // Just update state for pen
+        // Update Label
+        const lbl = document.getElementById('lblThickness');
+        if(lbl) lbl.innerText = s;
+
+        // Apply to selection immediately
+        this.state.selectedObjects.forEach(o => { 
+            if(!o.locked) o.width = this.state.penSize; 
+        }); 
+        this.draw(); 
+        this.saveHistory(); 
     }
 
     setTextSize(s) { 
-        const size = parseInt(s);
-        this.state.textSize = size; 
+        this.state.textSize = parseInt(s); 
+        // Update Label
+        const lbl = document.getElementById('lblTextSize');
+        if(lbl) lbl.innerText = s;
 
-        // 1. Apply to active Editor
-        if(this.state.editingText) {
-            this.state.editingText.fontSize = size;
-            this.textEditor.style.fontSize = size + 'px';
-            this.autoResizeTextEditor();
-            this.textEditor.focus(); // Keep focus!
-        }
-        
-        // 2. Apply to Selection
+        // Apply to selection immediately
         this.state.selectedObjects.forEach(o => { 
-            if(o.type==='text') o.fontSize = size; 
+            if(o.type==='text') o.fontSize = this.state.textSize; 
         }); 
-        
         this.draw(); 
         this.saveHistory(); 
     }
     
+    // Ensure font family updates immediately too
     setFontFamily(f) { 
         this.state.fontFamily = f; 
-
-        // 1. Apply to active Editor
-        if(this.state.editingText) {
-            this.state.editingText.fontFamily = f;
-            this.textEditor.style.fontFamily = f;
-            this.autoResizeTextEditor();
-            this.textEditor.focus(); // Keep focus!
-        }
-
-        // 2. Apply to Selection
         this.state.selectedObjects.forEach(o => { 
             if(o.type==='text') o.fontFamily = f; 
         }); 
-        
-        this.draw(); 
-        this.saveHistory(); 
-    }
-
-    setColor(c) { 
-        this.state.color = c; 
-
-        // 1. Apply to active Editor
-        if(this.state.editingText) {
-            this.state.editingText.color = c;
-            this.textEditor.style.color = c;
-            this.textEditor.focus(); // Keep focus!
-        }
-
-        // 2. Apply to Selection
-        this.state.selectedObjects.forEach(o => o.color = c); 
         this.draw(); 
         this.saveHistory(); 
     }
@@ -3383,57 +3338,63 @@ async translateSelectedText() {
     }
 }
         // --- TEXT ENTRY ---
-startTextEntry(x, y, existingObj = null) {
-        if (this.state.editingText) this.finalizeTextEntry();
-        
-        // Ensure Editor is in DOM
-        if (this.textEditor.parentNode !== this.wrapper) {
-            this.wrapper.appendChild(this.textEditor);
-        }
-
-        // Default object structure
-        let obj = existingObj;
-        if (!obj) {
-            obj = {
-                type: 'text', x: x, y: y, text: "",
-                color: this.state.color,
-                fontSize: this.state.textSize,
-                fontFamily: this.state.fontFamily,
-                fontWeight: 'normal',
-                fontStyle: 'normal'
-            };
-        }
-        
-        this.state.editingText = obj;
-        obj.isBeingEdited = true;
-
-        // 1. Setup Text Area
-        this.textEditor.value = obj.text;
-        this.textEditor.style.color = obj.color;
-        this.textEditor.style.font = `${obj.fontStyle || ''} ${obj.fontWeight || ''} ${obj.fontSize}px ${obj.fontFamily}`;
-        this.textEditor.style.lineHeight = "1.2";
-        this.textEditor.style.display = 'block';
-        this.textEditor.style.left = obj.x + 'px';
-        this.textEditor.style.top = obj.y + 'px';
-
-        // 2. SYNC THE INSPECTOR UI TO THIS TEXT
-        // Set Font Family Dropdown
-        const fontSel = document.getElementById('fontSelect');
-        if(fontSel) fontSel.value = obj.fontFamily || "'Lexend', sans-serif";
-        
-        // Set Size Dropdown
-        const sizeSel = document.getElementById('rangeTextSize');
-        if(sizeSel) sizeSel.value = obj.fontSize || 36;
-        
-        // Force the sidebar to update and show the text panel
-        this.state.selectedObjects = [obj]; // Temporarily select it so the UI knows what to show
-        this.updateSelectionUI();
-        
-        this.autoResizeTextEditor();
-        setTimeout(() => this.textEditor.focus(), 50);
-        
-        this.draw();
+  startTextEntry(x, y, existingObj = null) {
+    if (this.state.editingText) this.finalizeTextEntry();
+    
+    // Ensure Editor is in DOM
+    if (this.textEditor.parentNode !== this.wrapper) {
+        this.wrapper.appendChild(this.textEditor);
     }
+
+    // Default object structure
+    let obj = existingObj;
+    if (!obj) {
+        obj = {
+            type: 'text', x: x, y: y, text: "",
+            color: this.state.color,
+            fontSize: this.state.textSize,
+            fontFamily: this.state.fontFamily,
+            fontWeight: 'normal', // Default
+            fontStyle: 'normal'   // Default
+        };
+    }
+    
+    this.state.editingText = obj;
+    obj.isBeingEdited = true;
+
+    // 1. Setup Text Area
+    this.textEditor.value = obj.text;
+    this.textEditor.style.color = obj.color;
+    this.textEditor.style.font = `${obj.fontStyle || ''} ${obj.fontWeight || ''} ${obj.fontSize}px ${obj.fontFamily}`;
+    this.textEditor.style.lineHeight = "1.2";
+    this.textEditor.style.display = 'block';
+    this.textEditor.style.left = obj.x + 'px';
+    this.textEditor.style.top = obj.y + 'px';
+
+    // 2. Setup Toolbar
+    const toolbar = document.getElementById('textToolbar');
+    const colorInput = document.getElementById('textToolbarColor');
+    
+    if(toolbar) {
+        toolbar.style.display = 'flex';
+        toolbar.style.left = obj.x + 'px';
+        toolbar.style.top = obj.y + 'px'; // CSS transform handles the vertical offset
+        
+        // Sync toolbar state with object
+        colorInput.value = obj.color;
+        
+        // Toggle button visual state
+        const boldBtn = toolbar.querySelector('button[onclick*="Bold"]');
+        const italicBtn = toolbar.querySelector('button[onclick*="Italic"]');
+        
+        if(boldBtn) boldBtn.classList.toggle('active', obj.fontWeight === 'bold');
+        if(italicBtn) italicBtn.classList.toggle('active', obj.fontStyle === 'italic');
+    }
+
+    this.autoResizeTextEditor();
+    setTimeout(() => this.textEditor.focus(), 50);
+    this.draw();
+}
 
     // 2. Auto Resize
     autoResizeTextEditor() {
@@ -3448,73 +3409,65 @@ startTextEntry(x, y, existingObj = null) {
     }
 
     // 3. Finalize & Save
-finalizeTextEntry() {
-    const textObj = this.state.editingText; // Capture reference before clearing
-    
-    if (textObj) {
-        textObj.isBeingEdited = false;
-        const val = this.textEditor.value;
+    finalizeTextEntry() {
+        // Hide Toolbar
+    const toolbar = document.getElementById('textToolbar');
+    if(toolbar) toolbar.style.display = 'none';
+        if (this.state.editingText) {
+            this.state.editingText.isBeingEdited = false;
+            const val = this.textEditor.value;
 
-        if (val.trim().length > 0) {
-            textObj.text = val;
-            const current = this.getCurrentObjects();
-            if (!current.includes(textObj)) {
-                current.push(textObj);
+            if (val.trim().length > 0) {
+                this.state.editingText.text = val;
+                const current = this.getCurrentObjects();
+                if (!current.includes(this.state.editingText)) {
+                    current.push(this.state.editingText);
+                }
+            } else {
+                // Remove empty text objects
+                const current = this.getCurrentObjects();
+                const idx = current.indexOf(this.state.editingText);
+                if (idx > -1) current.splice(idx, 1);
             }
-            
-            // CRITICAL: Automatically select the text so the menu appears
-            this.state.selectedObjects = [textObj];
-            this.updateSelectionUI(); 
-            
-        } else {
-            // Remove empty text objects
-            const current = this.getCurrentObjects();
-            const idx = current.indexOf(textObj);
-            if (idx > -1) current.splice(idx, 1);
         }
-    }
 
-    this.textEditor.style.display = 'none';
-    this.state.editingText = null;
-    this.draw();
-    this.saveLocal();
-    this.saveHistory();
-}
-    toggleTextBold() {
-    // Case 1: While Typing
-    if (this.state.editingText) {
-        const obj = this.state.editingText;
-        obj.fontWeight = (obj.fontWeight === 'bold') ? 'normal' : 'bold';
-        this.textEditor.style.fontWeight = obj.fontWeight;
-        this.autoResizeTextEditor();
-    } 
-    // Case 2: Selected Object (Sidebar Action)
-    else if (this.state.selectedObjects.length === 1 && this.state.selectedObjects[0].type === 'text') {
-        const obj = this.state.selectedObjects[0];
-        obj.fontWeight = (obj.fontWeight === 'bold') ? 'normal' : 'bold';
-        
-        this.draw();             // Redraw canvas
-        this.saveHistory();      // Save state
-        this.updateSelectionUI(); // Refresh button to look "pressed"
+        this.textEditor.style.display = 'none';
+        this.state.editingText = null;
+        this.draw();
+        this.saveLocal();
+        this.saveHistory();
     }
+    toggleTextBold() {
+    if (!this.state.editingText) return;
+    const obj = this.state.editingText;
+    
+    // Toggle Logic
+    obj.fontWeight = (obj.fontWeight === 'bold') ? 'normal' : 'bold';
+    
+    // Update Editor Appearance
+    this.textEditor.style.fontWeight = obj.fontWeight;
+    
+    // Update Button Appearance
+    const btn = document.querySelector('#textToolbar button[onclick*="Bold"]');
+    if(btn) btn.classList.toggle('active');
+    
+    // Update Canvas
+    this.autoResizeTextEditor(); // Size might change with bold
+    this.draw(); 
 }
 
 toggleTextItalic() {
-    // Case 1: While Typing
-    if (this.state.editingText) {
-        const obj = this.state.editingText;
-        obj.fontStyle = (obj.fontStyle === 'italic') ? 'normal' : 'italic';
-        this.textEditor.style.fontStyle = obj.fontStyle;
-    } 
-    // Case 2: Selected Object (Sidebar Action)
-    else if (this.state.selectedObjects.length === 1 && this.state.selectedObjects[0].type === 'text') {
-        const obj = this.state.selectedObjects[0];
-        obj.fontStyle = (obj.fontStyle === 'italic') ? 'normal' : 'italic';
-        
-        this.draw();
-        this.saveHistory();
-        this.updateSelectionUI();
-    }
+    if (!this.state.editingText) return;
+    const obj = this.state.editingText;
+    
+    obj.fontStyle = (obj.fontStyle === 'italic') ? 'normal' : 'italic';
+    
+    this.textEditor.style.fontStyle = obj.fontStyle;
+    
+    const btn = document.querySelector('#textToolbar button[onclick*="Italic"]');
+    if(btn) btn.classList.toggle('active');
+    
+    this.draw();
 }
 
 updateTextColor(val) {
@@ -3574,7 +3527,7 @@ updateTextColor(val) {
         } catch (err) { 
             alert("Error parsing project file."); 
         }
-        this.needsBake = true;
+        this.needsBake = true
     }
 
     async saveProject() {
@@ -3626,47 +3579,39 @@ updateTextColor(val) {
             linkElement.click();
         }
     }
-       exportPNG() {
-        // 1. Create a temporary canvas to merge everything
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = this.canvas.width;
-        tempCanvas.height = this.canvas.height;
-        const tempCtx = tempCanvas.getContext('2d');
+        exportPNG() {
+            // 1. Create a temporary canvas to merge everything
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = this.canvas.width;
+            tempCanvas.height = this.canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
 
-        // 2. Fill with White (so transparent parts don't look black)
-        tempCtx.fillStyle = '#ffffff';
-        tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            // 2. Fill with White (so transparent parts don't look black)
+            tempCtx.fillStyle = '#ffffff';
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
 
-        // 3. Draw the Grid/Background first
-        if (this.state.gridType === 'webcam' && this.videoEl) {
-            // Calculate aspect ratio
-            const vw = this.videoEl.videoWidth;
-            const vh = this.videoEl.videoHeight;
-            const r = Math.max(tempCanvas.width / vw, tempCanvas.height / vh);
-            const nw = vw * r; 
-            const nh = vh * r;
-            const ox = (tempCanvas.width - nw) / 2; 
-            const oy = (tempCanvas.height - nh) / 2;
-            
-            tempCtx.drawImage(this.videoEl, ox, oy, nw, nh);
-        } else {
+            // 3. Draw the Grid/Background first
             tempCtx.drawImage(this.bgCanvas, 0, 0);
-        }
 
-        // 4. Draw the Main Content on top
-        tempCtx.drawImage(this.canvas, 0, 0);
+            // 4. Draw the Main Content on top
+            tempCtx.drawImage(this.canvas, 0, 0);
 
-        // 5. Convert to PNG and Trigger Download
-        const dataURL = tempCanvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.download = `slide_${this.state.currentSlide + 1}.png`;
-        link.href = dataURL;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-    
+            // 5. Convert to PNG and Trigger Download
+            const dataURL = tempCanvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = `slide_${this.state.currentSlide + 1}.png`;
+            link.href = dataURL;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
             
+            if (this.state.gridType === 'webcam' && this.videoEl) {
+   // Calculate aspect ratio logic here...
+   tempCtx.drawImage(this.videoEl, ox, oy, nw, nh);
+} else {
+   tempCtx.drawImage(this.bgCanvas, 0, 0);
+}
+        }
         exportSVG() {
             const w = this.canvas.width;
             const h = this.canvas.height;
@@ -3758,111 +3703,59 @@ updateTextColor(val) {
         }
         addSlide() { this.state.slides.push([]); this.renderSorter(); this.saveHistory(); }
         renderSorter() {
-    const sorter = document.getElementById('slideSorter');
-    const addBtn = sorter.querySelector('.add-slide-card');
-    sorter.innerHTML = '';
-    
-    this.state.slides.forEach((slide, index) => {
-        const card = document.createElement('div');
-        card.className = `slide-card ${index === this.state.currentSlide ? 'active' : ''}`;
-        
-        // --- FIX START ---
-        card.onclick = (e) => {
-            if(e.target.className.includes('btn-del')) return;
-            this.state.currentSlide = index;
-            this.needsBake = true; // Force cache update when jumping slides
-            this.toggleSorter();
-            this.draw();
-        };
-        // --- FIX END ---
-        
-        const canvas = document.createElement('canvas');
-        canvas.width = 200; canvas.height = 140;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = 'white'; ctx.fillRect(0,0,200,140);
-        
-        // Scale down to thumbnail size
-        const scaleX = 200 / (this.canvas.width || 1000); 
-        const scaleY = 140 / (this.canvas.height || 800);
-        ctx.save(); ctx.scale(scaleX, scaleY);
-        
-        slide.forEach(o => {
-            // Simple render for thumbnail
-            ctx.strokeStyle = o.color; ctx.lineWidth = o.width;
-            ctx.fillStyle = o.color;
-            if(o.type === 'rect') {
-                if(o.filled) ctx.fillRect(o.x, o.y, o.w, o.h);
-                ctx.strokeRect(o.x, o.y, o.w, o.h);
-            }
-            else if(o.type === 'circle') {
-                ctx.beginPath(); ctx.arc(o.x, o.y, (o.radius||o.r), 0, Math.PI*2);
-                if(o.filled) ctx.fill();
-                ctx.stroke();
-            }
-            else if(o.type === 'path' && o.points.length && !o.isEraser) {
-                ctx.beginPath(); ctx.moveTo(o.points[0].x, o.points[0].y);
-                o.points.forEach(p => ctx.lineTo(p.x, p.y));
-                ctx.stroke();
-            }
-            // (Optional: Add more shape types here for better thumbnails)
-        });
-        ctx.restore();
-        
-        const thumb = document.createElement('img');
-        thumb.className = 'slide-thumb'; 
-        thumb.src = canvas.toDataURL();
-        
-        const meta = document.createElement('div');
-        meta.className = 'slide-meta'; 
-        meta.innerHTML = `<span>Slide ${index+1}</span>`;
-        
-        if (this.state.slides.length > 1) {
-            const delBtn = document.createElement('button');
-            delBtn.className = 'btn-del-slide'; delBtn.innerHTML = '🗑';
-            delBtn.onclick = () => {
-                this.state.slides.splice(index, 1);
-                // Adjust index if we deleted the current or preceding slide
-                if(this.state.currentSlide >= index && this.state.currentSlide > 0) {
-                    this.state.currentSlide--;
+            const sorter = document.getElementById('slideSorter');
+            const addBtn = sorter.querySelector('.add-slide-card');
+            sorter.innerHTML = '';
+            this.state.slides.forEach((slide, index) => {
+                const card = document.createElement('div');
+                card.className = `slide-card ${index === this.state.currentSlide ? 'active' : ''}`;
+                card.onclick = (e) => {
+                    if(e.target.className.includes('btn-del')) return;
+                    this.state.currentSlide = index;
+                    this.toggleSorter();
+                    this.needsBake = true;
+                    this.draw();
+                };
+                const canvas = document.createElement('canvas');
+                canvas.width = 200; canvas.height = 140;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = 'white'; ctx.fillRect(0,0,200,140);
+                const scaleX = 200 / (this.canvas.width || 1000); const scaleY = 140 / (this.canvas.height || 800);
+                ctx.save(); ctx.scale(scaleX, scaleY);
+                slide.forEach(o => {
+                    ctx.strokeStyle = o.color; ctx.lineWidth = o.width;
+                    if(o.type === 'rect') ctx.strokeRect(o.x, o.y, o.w, o.h);
+                    else if(o.type === 'path' && o.points.length) {
+                        ctx.beginPath(); ctx.moveTo(o.points[0].x, o.points[0].y);
+                        o.points.forEach(p => ctx.lineTo(p.x, p.y));
+                        ctx.stroke();
+                    }
+                });
+                ctx.restore();
+                const thumb = document.createElement('img');
+                thumb.className = 'slide-thumb'; thumb.src = canvas.toDataURL();
+                const meta = document.createElement('div');
+                meta.className = 'slide-meta'; meta.innerHTML = `<span>Slide ${index+1}</span>`;
+                if (this.state.slides.length > 1) {
+                    const delBtn = document.createElement('button');
+                    delBtn.className = 'btn-del-slide'; delBtn.innerHTML = '🗑';
+                    delBtn.onclick = () => {
+                        this.state.slides.splice(index, 1);
+                        if(this.state.currentSlide >= this.state.slides.length) this.state.currentSlide = this.state.slides.length - 1;
+                        this.renderSorter(); this.saveHistory();
+                    };
+                    meta.appendChild(delBtn);
                 }
-                // If we deleted the last remaining slide (handled by length check above, but safe to check)
-                if(this.state.currentSlide >= this.state.slides.length) {
-                    this.state.currentSlide = Math.max(0, this.state.slides.length - 1);
-                }
-                
-                this.renderSorter(); 
-                this.saveHistory();
-                this.needsBake = true; // Ensure main canvas updates if current slide affected
-                this.draw();
-            };
-            meta.appendChild(delBtn);
+                card.appendChild(thumb); card.appendChild(meta); sorter.appendChild(card);
+            });
+            if(addBtn) sorter.appendChild(addBtn);
         }
-        card.appendChild(thumb); card.appendChild(meta); sorter.appendChild(card);
-    });
-    
-    if(addBtn) sorter.appendChild(addBtn);
-}
-        prevSlide() { 
-    if (this.state.currentSlide > 0) { 
-        this.state.currentSlide--; 
-        this.needsBake = true; // FIX: Force cache update
-        this.draw(); 
-        this.saveLocal(); 
-    } 
-}
-
-nextSlide() {
-    if (this.state.currentSlide < this.state.slides.length - 1) { 
-        this.state.currentSlide++; 
-    } else { 
-        this.state.slides.push([]); 
-        this.state.currentSlide++; 
-    }
-    this.needsBake = true; // FIX: Force cache update
-    this.draw(); 
-    this.saveLocal(); 
-    this.saveHistory();
-}
+        prevSlide() { if (this.state.currentSlide > 0) { this.state.currentSlide--; this.needsBake = true;this.draw(); this.saveLocal(); } }
+        nextSlide() {
+            if (this.state.currentSlide < this.state.slides.length - 1) { this.state.currentSlide++; } 
+            else { this.state.slides.push([]); this.state.currentSlide++; } this.needsBake = true;
+            this.draw(); this.saveLocal(); this.saveHistory();
+        }
 
         // --- GRID ---
         resizeCanvas() { 
@@ -3909,13 +3802,9 @@ nextSlide() {
                 for(let y=0; y<=h; y+=major) { this.bgCtx.moveTo(0, y); this.bgCtx.lineTo(w, y); }
                 this.bgCtx.stroke();
             } else if(this.state.gridType === 'dot') {
-                this.bgCtx.beginPath(); 
-                // CHANGED: Use 30% opacity (0.3) instead of solid color to make it fainter
-                this.bgCtx.fillStyle = 'rgba(100, 116, 139, 0.3)'; 
+                this.bgCtx.beginPath(); this.bgCtx.fillStyle = '#64748b'; 
                 for(let x=s; x<w; x+=s) {
-                    for(let y=s; y<h; y+=s) { 
-                        this.bgCtx.moveTo(x + 2, y); 
-                        this.bgCtx.arc(x, y, 2, 0, Math.PI*2);}
+                    for(let y=s; y<h; y+=s) { this.bgCtx.moveTo(x + 2, y); this.bgCtx.arc(x, y, 2, 0, Math.PI*2); }
                 }
                 this.bgCtx.fill(); 
             } else {
@@ -4031,17 +3920,13 @@ nextSlide() {
         setGridSize(s) { this.state.gridSize = parseInt(s); this.drawGrid(); }
         toggleSnap() { this.state.snapToGrid = !this.state.snapToGrid; }
     }
-        
 class RadialMenu {
     constructor() {
-        // --- ADDED: State Flag ---
-        this.isEnabled = true; 
-
-        // 1. SELF-REPAIR: Delete any old broken menus
+        // 1. SELF-REPAIR: Delete any old broken menus to prevent conflicts
         const old = document.getElementById('radialOverlay');
         if (old) old.remove();
 
-        // 2. SELF-REPAIR: Inject CSS if missing
+        // 2. SELF-REPAIR: Inject the CSS automatically
         if (!document.getElementById('radial-styles')) {
             const css = `
                 .radial-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; display: none; }
@@ -4057,10 +3942,11 @@ class RadialMenu {
             document.head.appendChild(style);
         }
 
+        // 3. SELF-REPAIR: Create the HTML elements automatically
         this.overlay = document.createElement('div');
         this.overlay.id = 'radialOverlay';
         this.overlay.className = 'radial-overlay';
-        this.overlay.onclick = () => this.hide(); 
+        this.overlay.onclick = () => this.hide(); // Direct JS binding (fixes "radialMenu is undefined" error)
         
         this.menu = document.createElement('div');
         this.menu.id = 'radialMenu';
@@ -4068,28 +3954,24 @@ class RadialMenu {
         this.overlay.appendChild(this.menu);
         document.body.appendChild(this.overlay);
 
-        // Define Items
+        this.active = false;
+        
         this.items = [
-            { id: 'pen', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>', angle: 270, action: () => window.app.setTool('pen') },
-            { id: 'rect', icon: '<div style="width:16px; height:16px; border:2px solid currentColor; border-radius:2px;"></div>', angle: 315, action: () => window.app.setTool('rect') },
-            { id: 'select', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path></svg>', angle: 0, action: () => window.app.setTool('select') },
-            { id: 'circle', icon: '<div style="width:16px; height:16px; border:2px solid currentColor; border-radius:50%;"></div>', angle: 45, action: () => window.app.setTool('circle') },
-            { id: 'eraser', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 20H7L3 16C3 16 3 16 3 16C1.5 14.5 1.5 12 3 10.5L10 3.5C11.5 2 14 2 15.5 3.5L20.5 8.5C22 10 22 12.5 20.5 14L16 18.5"></path><path d="M18 14l-6-6"></path></svg>', angle: 90, action: () => window.app.setTool('eraser') },
-            { id: 'line', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"></line></svg>', angle: 225, action: () => window.app.setTool('line') },
-            { id: 'undo', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path></svg>', angle: 180, action: () => window.app.undo() },
+            { id: 'pen', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>', angle: 270, action: () => app.setTool('pen') },
+            { id: 'rect', icon: '<div style="width:16px; height:16px; border:2px solid currentColor; border-radius:2px;"></div>', angle: 315, action: () => app.setTool('rect') },
+            { id: 'select', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path></svg>', angle: 0, action: () => app.setTool('select') },
+            { id: 'circle', icon: '<div style="width:16px; height:16px; border:2px solid currentColor; border-radius:50%;"></div>', angle: 45, action: () => app.setTool('circle') },
+            { id: 'eraser', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 20H7L3 16C3 16 3 16 3 16C1.5 14.5 1.5 12 3 10.5L10 3.5C11.5 2 14 2 15.5 3.5L20.5 8.5C22 10 22 12.5 20.5 14L16 18.5"></path><path d="M18 14l-6-6"></path></svg>', angle: 90, action: () => app.setTool('eraser') },
+            { id: 'line', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"></line></svg>', angle: 225, action: () => app.setTool('line') },
+            { id: 'undo', icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path></svg>', angle: 180, action: () => app.undo() },
         ];
 
         this.initButtons();
         this.initEvents();
     }
-    
-    // --- ADDED: Toggle Method ---
-    toggleEnabled() {
-        this.isEnabled = !this.isEnabled;
-        return this.isEnabled;
-    }
 
     initButtons() {
+        // Center Close Button
         const centerBtn = document.createElement('div');
         centerBtn.className = 'radial-btn radial-center';
         centerBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
@@ -4111,17 +3993,17 @@ class RadialMenu {
     }
 
     initEvents() {
+        // 1. Right Click
         window.addEventListener('contextmenu', (e) => {
-            // --- ADDED: Check Flag ---
-            if (!this.isEnabled) return; 
-            
-            e.preventDefault(); 
+            e.preventDefault(); // This blocks the browser menu. If custom menu fails, you see nothing.
             this.show(e.clientX, e.clientY);
         });
 
+        // 2. Long Press (with Jitter Tolerance)
         let touchTimer = null;
         let startX = 0, startY = 0;
-        const canvas = document.getElementById('tempCanvas'); 
+        
+        const canvas = document.getElementById('tempCanvas'); // Attach to drawing surface
         if(!canvas) return;
 
         canvas.addEventListener('touchstart', (e) => {
@@ -4129,10 +4011,7 @@ class RadialMenu {
             const t = e.touches[0];
             startX = t.clientX; startY = t.clientY;
             touchTimer = setTimeout(() => {
-                // --- ADDED: Check Flag ---
-                if (!this.isEnabled) return;
-                
-                if (typeof window.app !== 'undefined') window.app.cancelCurrentAction();
+                if (typeof app !== 'undefined') app.cancelCurrentAction();
                 this.show(startX, startY);
                 if (navigator.vibrate) navigator.vibrate(50);
             }, 500);
@@ -4154,8 +4033,7 @@ class RadialMenu {
         canvas.addEventListener('touchmove', cancel, { passive: false });
         canvas.addEventListener('touchend', cancel);
     }
-    
-    // ... keep show() and hide() as they were ...
+
     show(x, y) {
         this.overlay.style.display = 'block';
         this.menu.style.left = x + 'px';
@@ -4169,35 +4047,12 @@ class RadialMenu {
     }
 }
 
-
-   // --- INITIALIZATION ---
-// Force strict globals to ensure visibility across classes
-window.app = new MathsMaster();
-window.ui = new UIController();
+// FORCE GLOBAL INITIALIZATION
 window.radialMenu = new RadialMenu();
-    function toggleRadialMenu() {
-    // 1. Toggle the logic in the class
-    const isActive = window.radialMenu.toggleEnabled();
-    
-    // 2. Update the button visual state
-    const btn = document.getElementById('btn-radial-toggle');
-    if (btn) {
-        if (isActive) {
-            btn.classList.add('active');
-            // Optional: Provide visual feedback
-            btn.style.opacity = '1';
-        } else {
-            btn.classList.remove('active');
-            // Optional: Dim slightly to show it's disabled
-            btn.style.opacity = '0.5';
-        }
-    }
-}
-
-// Optional: Assign to const for convenience if needed, but the window attachment is what fixes the menu.
-const app = window.app;
-const ui = window.ui;
-const radialMenu = window.radialMenu;
+    // --- INITIALIZATION ---
+    const app = new MathsMaster();
+    const ui = new UIController();
+const radialMenu = new RadialMenu();
     // AI Chat Functions
     
    // ===========================================
