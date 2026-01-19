@@ -1009,15 +1009,62 @@ Contact: andyrwilkins123@gmail.com -->
     </div>
 </div>
 
-<div id="win-calc" class="floating-window" style="width: 360px; height: 600px; max-height: 85vh; display: none; flex-direction: column;">
-    <div class="fw-header">
-        Desmos Scientific Calculator
+<div id="win-calc" class="floating-window" 
+     style="width: 360px; height: 600px; max-height: 85vh; display: none; flex-direction: column; 
+            resize: both; overflow: hidden; min-width: 300px; min-height: 400px;">
+            
+    <div class="fw-header" style="display: flex; align-items: center; justify-content: space-between;">
+        <span>Calculator</span>
+        
+        <div style="display: flex; gap: 5px; background: rgba(0,0,0,0.05); padding: 2px; border-radius: 8px;">
+            <button id="btn-mode-sci" onclick="switchCalcMode('sci')" style="border: none; background: white; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">Sci</button>
+            <button id="btn-mode-graph" onclick="switchCalcMode('graph')" style="border: none; background: transparent; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; color: #64748b;">Graph</button>
+        </div>
+
         <span class="fw-close" onclick="ui.toggleWindow('win-calc')">&times;</span>
     </div>
     
-    <div class="fw-content" style="padding: 0; flex-grow: 1; overflow: hidden; background: white;">
-        <iframe src="https://www.desmos.com/scientific" width="100%" height="100%" style="border:none;"></iframe>
+    <div class="fw-content" style="padding: 0; flex-grow: 1; overflow: hidden; background: white; position: relative;">
+        <iframe id="desmos-frame" src="https://www.desmos.com/scientific" width="100%" height="100%" style="border:none;"></iframe>
+        
+        <div style="position: absolute; bottom: 2px; right: 2px; pointer-events: none; opacity: 0.5;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="21" y1="21" x2="12" y2="21"></line>
+                <line x1="21" y1="12" x2="21" y2="21"></line>
+                <line x1="16" y1="21" x2="21" y2="16"></line>
+            </svg>
+        </div>
     </div>
+
+    <script>
+        function switchCalcMode(mode) {
+            const frame = document.getElementById('desmos-frame');
+            const btnSci = document.getElementById('btn-mode-sci');
+            const btnGraph = document.getElementById('btn-mode-graph');
+            const win = document.getElementById('win-calc');
+
+            if (mode === 'sci') {
+                frame.src = "https://www.desmos.com/scientific";
+                win.style.width = "360px"; 
+                
+                // Style Buttons
+                btnSci.style.background = "white"; btnSci.style.boxShadow = "0 1px 2px rgba(0,0,0,0.1)"; btnSci.style.color = "black";
+                btnGraph.style.background = "transparent"; btnGraph.style.boxShadow = "none"; btnGraph.style.color = "#64748b";
+            } else {
+                frame.src = "https://www.desmos.com/calculator?embedded=true";
+                win.style.width = "600px"; 
+                
+                // Style Buttons
+                btnGraph.style.background = "white"; btnGraph.style.boxShadow = "0 1px 2px rgba(0,0,0,0.1)"; btnGraph.style.color = "black";
+                btnSci.style.background = "transparent"; btnSci.style.boxShadow = "none"; btnSci.style.color = "#64748b";
+            }
+            
+            // Keep on screen if expansion pushes it off
+            if(parseInt(win.style.left) + parseInt(win.style.width) > window.innerWidth) {
+                win.style.left = (window.innerWidth - parseInt(win.style.width) - 20) + "px";
+            }
+        }
+    </script>
 </div>
     <div id="win-bg" class="floating-window" style="width: 250px;">
     <div class="fw-header">Background <span class="fw-close" onclick="ui.toggleWindow('win-bg')">&times;</span></div>
