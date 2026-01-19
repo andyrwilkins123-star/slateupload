@@ -1009,53 +1009,14 @@ Contact: andyrwilkins123@gmail.com -->
     </div>
 </div>
 
-<div id="win-calc" class="floating-window">
-    <div class="fw-header">Scientific Calculator <span class="fw-close" onclick="ui.toggleWindow('win-calc')">&times;</span></div>
-    <div class="fw-content">
-        <div class="calc-screen">
-            <input type="text" id="calcInput" style="width:100%; border:none; background:transparent; text-align:right; font-family:monospace; font-size:16px;" placeholder="Type or click...">
-            <div id="calcResult" style="color:#15803d; font-size:24px; margin-top:4px;">0</div>
-        </div>
-        <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-            <span id="modeIndicator" style="font-size:12px; font-weight:bold; color:#64748b;">DEG</span>
-            <div id="latexPreview" style="font-size:14px; color:#3b82f6;">$$0$$</div>
-        </div>
-        <div class="calc-grid">
-            <button class="c-btn" onclick="ui.setCalcMode('RAD')">RAD</button>
-            <button class="c-btn" onclick="ui.setCalcMode('DEG')">DEG</button>
-            <button class="c-btn" onclick="ui.trig('sin')">sin</button>
-            <button class="c-btn" onclick="ui.trig('cos')">cos</button>
-            <button class="c-btn" onclick="ui.trig('tan')">tan</button>
-            
-            <button class="c-btn" onclick="ui.addToCalc('(')">(</button>
-            <button class="c-btn" onclick="ui.addToCalc(')')">)</button>
-            <button class="c-btn" onclick="ui.addToCalc('sqrt(')">√</button>
-            <button class="c-btn" onclick="ui.addToCalc('^')">^</button>
-            <button class="c-btn" onclick="ui.addToCalc('pi')">π</button>
-            
-            <button class="c-btn" onclick="ui.addToCalc('7')">7</button>
-            <button class="c-btn" onclick="ui.addToCalc('8')">8</button>
-            <button class="c-btn" onclick="ui.addToCalc('9')">9</button>
-            <button class="c-btn" style="background:#fca5a5;" onclick="ui.calcDel()">DEL</button>
-            <button class="c-btn" style="background:#fca5a5;" onclick="ui.calcAC()">AC</button>
-            
-            <button class="c-btn" onclick="ui.addToCalc('4')">4</button>
-            <button class="c-btn" onclick="ui.addToCalc('5')">5</button>
-            <button class="c-btn" onclick="ui.addToCalc('6')">6</button>
-            <button class="c-btn" onclick="ui.addToCalc('*')">×</button>
-            <button class="c-btn" onclick="ui.addToCalc('/')">÷</button>
-            
-            <button class="c-btn" onclick="ui.addToCalc('1')">1</button>
-            <button class="c-btn" onclick="ui.addToCalc('2')">2</button>
-            <button class="c-btn" onclick="ui.addToCalc('3')">3</button>
-            <button class="c-btn" onclick="ui.addToCalc('+')">+</button>
-            <button class="c-btn" onclick="ui.addToCalc('-')">-</button>
-            
-            <button class="c-btn" onclick="ui.addToCalc('0')">0</button>
-            <button class="c-btn" onclick="ui.addToCalc('.')">.</button>
-            <button class="c-btn" onclick="ui.useAns()">Ans</button>
-            <button class="c-btn" style="grid-column: span 2; background:#86efac;" onclick="ui.calculate()">=</button>
-        </div>
+<div id="win-calc" class="floating-window" style="width: 360px; height: 600px; max-height: 85vh; display: none; flex-direction: column;">
+    <div class="fw-header">
+        Desmos Scientific Calculator
+        <span class="fw-close" onclick="ui.toggleWindow('win-calc')">&times;</span>
+    </div>
+    
+    <div class="fw-content" style="padding: 0; flex-grow: 1; overflow: hidden; background: white;">
+        <iframe src="https://www.desmos.com/scientific" width="100%" height="100%" style="border:none;"></iframe>
     </div>
 </div>
     <div id="win-bg" class="floating-window" style="width: 250px;">
@@ -1225,17 +1186,29 @@ Contact: andyrwilkins123@gmail.com -->
 }
 
         toggleWindow(id) { 
-            const el = document.getElementById(id); 
-            if (el.style.display === 'flex') {
-                el.style.display = 'none';
-            } else {
-                el.style.display = 'flex';
-                const w = window.innerWidth; const h = window.innerHeight;
-                const elW = el.offsetWidth || 300; const elH = el.offsetHeight || 300;
-                el.style.left = Math.max(20, (w / 2 - elW / 2)) + 'px'; 
-                el.style.top = Math.max(20, (h / 2 - elH / 2)) + 'px';
-            }
+    const el = document.getElementById(id); 
+    if (el.style.display === 'flex') {
+        el.style.display = 'none';
+    } else {
+        el.style.display = 'flex';
+        const w = window.innerWidth; 
+        const h = window.innerHeight;
+        const elW = el.offsetWidth || 300; 
+        const elH = el.offsetHeight || 300;
+
+        // Center Horizontally
+        el.style.left = Math.max(20, (w / 2 - elW / 2)) + 'px'; 
+        
+        // Vertical Position Logic
+        if (id === 'win-calc') {
+            // STRICT FIX: Force calculator to 20px from the top
+            el.style.top = '20px'; 
+        } else {
+            // Keep other windows centered
+            el.style.top = Math.max(20, (h / 2 - elH / 2)) + 'px';
         }
+    }
+}
 
         // --- DICE ---
         rollDice() {
@@ -1287,50 +1260,7 @@ Contact: andyrwilkins123@gmail.com -->
             } else { alert("Could not recognize that YouTube URL."); }
         }
 
-        // --- CALCULATOR ---
-        updateLatex() {
-            const input = document.getElementById('calcInput').value;
-            const preview = document.getElementById('latexPreview');
-            let displayStr = input.replace(/Math\.PI/g, '\\pi').replace(/Math\.E/g, 'e').replace(/\//g, ' \\div ').replace(/\*/g, ' \\times ').replace(/\*\*/g, '^').replace(/Math\./g, '');
-            displayStr = displayStr.replace(/log10\(/g, '\\log_{10}(').replace(/log\(/g, '\\ln(').replace(/sin\(/g, '\\sin(').replace(/cos\(/g, '\\cos(').replace(/tan\(/g, '\\tan(').replace(/sqrt\(/g, '\\sqrt{');
-            if((displayStr.match(/\\sqrt\{/g) || []).length > (displayStr.match(/\}/g) || []).length) { displayStr += '}'; }
-            preview.innerHTML = `$$${displayStr || '0'}$$`;
-            if (window.MathJax) MathJax.typesetPromise([preview]);
-        }
-        setCalcMode(m) { this.calcMode = m; document.getElementById('modeIndicator').textContent = m; }
-        addToCalc(val) { document.getElementById('calcInput').value += val; this.updateLatex(); }
-        calcDel() { const inp = document.getElementById('calcInput'); inp.value = inp.value.slice(0, -1); this.updateLatex(); }
-        calcAC() { document.getElementById('calcInput').value = ""; document.getElementById('calcResult').innerText = "0"; this.updateLatex(); }
-        trig(func) { this.addToCalc(func + '('); }
-        useAns() { this.addToCalc(this.lastAns); }
-        calculate() {
-            let expr = document.getElementById('calcInput').value;
-            if (!expr) return;
-            try {
-                let processedExpr = expr.replace(/Math\.PI/g, 'pi').replace(/Math\.E/g, 'e').replace(/Math\./g, '').replace(/\*\*/g, '^');
-                // Auto-close parentheses
-                const openP = (processedExpr.match(/\(/g) || []).length;
-                const closeP = (processedExpr.match(/\)/g) || []).length;
-                if (openP > closeP) processedExpr += ')'.repeat(openP - closeP);
-                
-                let scope = {};
-                if (this.calcMode === 'DEG') {
-                    scope = {
-                        sin: (x) => math.sin(math.unit(x, 'deg')),
-                        cos: (x) => math.cos(math.unit(x, 'deg')),
-                        tan: (x) => math.tan(math.unit(x, 'deg')),
-                        asin: (x) => math.number(math.asin(x), 'deg'),
-                        acos: (x) => math.number(math.acos(x), 'deg'),
-                        atan: (x) => math.number(math.atan(x), 'deg')
-                    };
-                }
-                const result = math.evaluate(processedExpr, scope);
-                this.lastAns = result;
-                document.getElementById('calcResult').innerText = math.format(result, {precision: 10});
-                this.updateLatex();
-            } catch (e) { document.getElementById('calcResult').innerText = "Error"; }
-        }
-    }
+}
 
 
 // --- PHYSICS ENGINE INTEGRATION (SLIPPERY SLOPES) ---
